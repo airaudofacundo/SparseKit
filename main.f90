@@ -22,11 +22,10 @@ program Test
 !!$  call mat%printValue(1,1)
 !!$  call mat%printValue(1,1,'values.dat')
 !!$  call mat%printValue(3,3,'values.dat')
-  !call mat%printNonZeros()
 
   call mat%printAll()
 
-  call mat%deleteRow(2)
+  call mat%deleteRowAndCol(2,3)
 
   call mat%printAll()
 

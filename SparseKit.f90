@@ -52,7 +52,7 @@ module SparseKit
      procedure, public :: printNonZeros
      procedure, public :: printAll
 
-     procedure, public :: deleteRow
+     procedure, public :: deleteRowAndCol
      
      procedure, private :: handleDuplicates
   end type Sparse
@@ -73,7 +73,7 @@ module SparseKit
   real(dp), dimension(:), allocatable :: auxA
   integer, dimension(:), allocatable :: auxAJ
   integer, dimension(:), allocatable :: rowVector
-  integer :: repeats, i, j, k, l, n, m
+  integer :: repeats, l, n, m
 
   
   interface sparse
@@ -170,6 +170,7 @@ contains
   subroutine makeCRS(this)
     implicit none
     class(Sparse), intent(InOut) :: this
+    integer :: i
     isCRSDone = .true.
     allocate(this%rowCounter(m))
     !This%Counter entries in each row, including duplicates
@@ -210,6 +211,7 @@ contains
     implicit none
     class(Sparse), intent(InOut) :: this
     logical :: mask
+    integer :: i, j, k
     allocate(rowVector(maxval(this%rowCounter)))
     allocate(valueVector(maxval(this%rowCounter)))
     this%counter = 1
@@ -257,8 +259,9 @@ contains
     class(Sparse), intent(inout) :: this
     integer, intent(in) :: i
     integer, intent(in) :: j
+    integer :: k
     k = this%AI(i)
-    do while(k <= this%AI(i+1))
+    do while(k < this%AI(i+1))
        if(this%AJ(k) == j) then
           get = this%A(k)
           return
@@ -356,38 +359,66 @@ contains
   !     Input, ...
   !     Output, ...
   !***************************************************
-  subroutine deleteRow(this, row) !Capaz lo junto con el delete col?
+  subroutine deleteRowAndCol(this, row, col)
     Implicit none
     class(Sparse), intent(inout) :: this
     integer, intent(in) :: row
-    integer :: i, k, rowSize
+    integer, intent(in) :: col
+    integer :: i, j, k
+    integer :: rowSize, nnz
     integer, dimension(:), allocatable :: AI
     
+    allocate(AI(size(this%AI)))
+    do i = 1, size(AI)
+       AI(i) = this%AI(i)
+    end do
+    deallocate(this%AI)
+    
+    nnz = size(this%AJ)
     if(isCRSDone) then
-       rowSize = this%AI(row+1)-this%AI(row)
-       k = this%AI(row)
-       do while(k < size(this%AJ)-rowSize)
-          this%AJ(k) = this%AJ(k+rowSize)
-          this%A(k) = this%A(k+rowSize)
-          k = k + 1
-       end do
-       allocate(AI(size(this%AI)-1))
-       do i = 1, row-1
-          AI(i) = this%AI(i)
-       end do
-       do i = row, size(AI)
-          AI(i) = this%AI(i+1)-rowSize
-       end do
-       deallocate(this%AI)
-       allocate(this%AI(size(AI)))
-       do i = 1, size(AI)
-          this%AI(i) = AI(i)
-       end do
-       deallocate(AI)
-    else
-       
-    end if
-  end subroutine deleteRow
+       do i = size(AI)-1, 1, -1
+             if(i == row) then
+                rowSize = AI(i+1)-AI(i)
+                k = AI(i)
+                do while(k < nnz-rowSize+1)
+                   this%AJ(k) = this%AJ(k+rowSize)
+                   this%A(k) = this%A(k+rowSize)
+                   k = k + 1
+                end do
+                nnz = nnz - rowSize
+                do k = row, size(AI)-1
+                   AI(k) = AI(k+1) - rowSize
+                end do
+             else 
+                do j = AI(i), AI(i+1)-1
+                   if(this%AJ(j) == col) then
+                      k = j
+                      do while(k < nnz)
+                         this%A(k) = this%A(k+1)
+                         this%AJ(k) = this%AJ(k+1)
+                         k = k + 1
+                      end do
+                      do k = i+1, size(AI)
+                         AI(k) = AI(k)-1
+                      end do
+                      nnz = nnz - 1
+                   end if
+                end do
+             end if
+          end do
+          do i = 1, nnz
+             if(this%AJ(i) > col) then
+                this%AJ(i) = this%AJ(i)-1
+             end if
+          end do
+          allocate(this%AI(size(AI)-1))
+          do i = 1, size(this%AI)
+             this%AI(i) = AI(i)
+          end do
+       else
+          
+       end if
+  end subroutine deleteRowAndCol
   !***************************************************
   ! RutinaNombre:
   !     Descripcion asd asd as d 
@@ -402,6 +433,7 @@ contains
     type(Sparse), intent(in) :: b
     type(Sparse) :: c
     real(dp) :: Cij
+    integer :: i, j, k
     integer :: counter, aRowSize, bRowSize, ptr, l
     if(size(a%AI) /= size(b%AI)) then
        print'(A)', '** diferent sizes in input sparse matrices! **'
@@ -444,7 +476,7 @@ contains
     real(dp), dimension(:), intent(in) :: vect
     real(dp), dimension(size(vect)) :: res
     real(dp) :: val
-    integer :: counter, rowSize, i
+    integer :: counter, rowSize, i, k
     res = 0.d0
     counter = 1
     do i = 1, size(mat%AI)-1
