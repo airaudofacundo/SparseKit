@@ -7,9 +7,9 @@ program Test
 
   call mat%append(3.d0, 1, 1)
   call mat%append(2.d0, 1, 2)
-  call mat%append(6.d0, 2, 2)
+  call mat%append(6,    2, 2)
   call mat%append(7.d0, 3, 1)
-  call mat%append(9.d0, 3, 3)
+  call mat%append(9.,   3, 3)
   
   call mat%makeCRS
 
@@ -22,9 +22,13 @@ program Test
 !!$  call mat%printValue(1,1)
 !!$  call mat%printValue(1,1,'values.dat')
 !!$  call mat%printValue(3,3,'values.dat')
-  call mat%printNonZeros()
+  !call mat%printNonZeros()
 
-  !call mat%printAll()
+  call mat%printAll()
+
+  call mat%deleteRow(2)
+
+  call mat%printAll()
 
 end program Test
 

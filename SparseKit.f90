@@ -45,10 +45,15 @@ module SparseKit
      procedure, public :: update
      procedure, public :: append
      procedure, public :: makeCRS
+     
      procedure, public :: get
+     
      procedure, public :: printValue
      procedure, public :: printNonZeros
      procedure, public :: printAll
+
+     procedure, public :: deleteRow
+     
      procedure, private :: handleDuplicates
   end type Sparse
 
@@ -62,7 +67,8 @@ module SparseKit
   
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
-  !*********************************************** 
+  !***********************************************
+  logical :: isCRSDone = .false.
   real(dp), dimension(:), allocatable :: valueVector
   real(dp), dimension(:), allocatable :: auxA
   integer, dimension(:), allocatable :: auxAJ
@@ -76,12 +82,13 @@ module SparseKit
   
 contains
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! Constructor:
+  !     Initializes the object with and estimate of
+  !     the matrix's non zeros and the number of rows
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, nnz, rows
+  !     Output, -
   !***************************************************
   type(Sparse) function constructor(nnz, rows)
     implicit none
@@ -105,18 +112,19 @@ contains
     this%counter = 0
   end subroutine init
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! update:
+  !     updates basic values
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, nnz, rows
+  !     Output, -
   !***************************************************
   subroutine update(this, nnz, rows)
     implicit none
     class(sparse), intent(inout) :: this
     integer, intent(in) :: nnz
     integer, intent(in) :: rows
+    isCRSDone = .false.
     if(allocated(this%triplet%A)) then
        deallocate(this%triplet%A, this%triplet%row, this%triplet%col)
     end if
@@ -144,7 +152,7 @@ contains
   subroutine append(this, value, row, col)
     implicit none
     class(Sparse), intent(InOut) :: this
-    real(dp), intent(In) :: value
+    class(*), intent(In) :: value
     integer, intent(In) :: row, col
     this%counter = this%counter + 1
     this%triplet%A(this%counter) = value
@@ -162,6 +170,7 @@ contains
   subroutine makeCRS(this)
     implicit none
     class(Sparse), intent(InOut) :: this
+    isCRSDone = .true.
     allocate(this%rowCounter(m))
     !This%Counter entries in each row, including duplicates
     this%rowCounter = 0
@@ -174,7 +183,7 @@ contains
     call quicksort(this%triplet%row, this%triplet%col, this%triplet%A, 1, this%counter)
     !sum up duplicates
     call this%handleDuplicates()
-    !Allocate A and AJ with nzn
+    !Allocate A and AJ with nnz
     allocate(this%A(this%counter), this%AJ(this%counter))
     do i = 1, this%counter
        this%A(i) = auxA(i)
@@ -347,21 +356,38 @@ contains
   !     Input, ...
   !     Output, ...
   !***************************************************
-  subroutine deleteRow(this, row)
-    implicit none
-    class(Sparse), intent(in) :: this
+  subroutine deleteRow(this, row) !Capaz lo junto con el delete col?
+    Implicit none
+    class(Sparse), intent(inout) :: this
     integer, intent(in) :: row
-    rowSize = this%AI(row+1)-this%AI(row)
-    k = this%AI(row)
-    do while(
-       call swap(this%A(k), this%A(k+rowSize))
-       call swap(this%AJ(k), this%A(k+rowSize))
-       k = k + 1
-    end do
-    allocate(AI(size(this%AI)-1))
-    do i = 1,
-
-    end do
+    integer :: i, k, rowSize
+    integer, dimension(:), allocatable :: AI
+    
+    if(isCRSDone) then
+       rowSize = this%AI(row+1)-this%AI(row)
+       k = this%AI(row)
+       do while(k < size(this%AJ)-rowSize)
+          this%AJ(k) = this%AJ(k+rowSize)
+          this%A(k) = this%A(k+rowSize)
+          k = k + 1
+       end do
+       allocate(AI(size(this%AI)-1))
+       do i = 1, row-1
+          AI(i) = this%AI(i)
+       end do
+       do i = row, size(AI)
+          AI(i) = this%AI(i+1)-rowSize
+       end do
+       deallocate(this%AI)
+       allocate(this%AI(size(AI)))
+       do i = 1, size(AI)
+          this%AI(i) = AI(i)
+       end do
+       deallocate(AI)
+    else
+       
+    end if
+  end subroutine deleteRow
   !***************************************************
   ! RutinaNombre:
   !     Descripcion asd asd as d 
