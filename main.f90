@@ -2,14 +2,15 @@ program Test
   use SparseKit
   implicit none
   type(Sparse) :: mat
+  type(Sparse) :: transMat
 
   mat = sparse(7, 3)
 
   call mat%append(3.d0, 1, 1)
   call mat%append(2.d0, 1, 2)
   call mat%append(6,    2, 2)
-  call mat%append(7.d0, 3, 1)
   call mat%append(9.,   3, 3)
+  call mat%append(7.d0, 3, 1)
   
   call mat%makeCRS
 
@@ -23,11 +24,17 @@ program Test
 !!$  call mat%printValue(1,1,'values.dat')
 !!$  call mat%printValue(3,3,'values.dat')
 
-  call mat%printAll()
+  call mat%printAll
 
+<<<<<<< HEAD
 !!$  call mat%deleteRowAndCol(2,3)
 
 !!$  call mat%printAll()
+=======
+  transMat = transpose(mat)
+
+  call transMat%printAll
+>>>>>>> d39176a91a441982af6e004e7566882ecbf92e3b
 
 end program Test
 
