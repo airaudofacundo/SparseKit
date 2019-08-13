@@ -26,7 +26,7 @@ module SparseKit
   use quickSortMod
   implicit none
   private
-  public :: Sparse, operator(*), operator(+)
+  public :: Sparse, operator(*), operator(+), transpose, norm
   type Triplet
      real(dp), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
@@ -66,6 +66,16 @@ module SparseKit
   interface operator(+)
      module procedure sparse_sparse_add
   end interface operator(+)
+  interface sparse
+     procedure constructor
+  end interface sparse
+  interface transpose
+     module procedure transpose
+  end interface transpose
+  interface norm
+     module procedure norm
+  end interface norm
+  
   
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
@@ -76,20 +86,16 @@ module SparseKit
   integer, dimension(:), allocatable :: auxAJ
   integer, dimension(:), allocatable :: rowVector
   integer :: repeats, l
-
-  
-  interface sparse
-     procedure constructor
-  end interface sparse
   
 contains
   !***************************************************
   ! Constructor:
   !     Initializes the object with and estimate of
   !     the matrix's non zeros and the number of rows
+  !     Won't work if given an inferior nnz
   !  
   ! Parameters:
-  !     Input, nnz, rows
+  !     Input, nnz(int), rows(int)
   !     Output, -
   !***************************************************
   type(Sparse) function constructor(nnz, rows)
@@ -118,7 +124,7 @@ contains
   !     updates basic values
   !  
   ! Parameters:
-  !     Input, nnz, rows
+  !     Input, nnz(int), rows(int)
   !     Output, -
   !***************************************************
   subroutine update(this, nnz, rows)
@@ -144,12 +150,13 @@ contains
     this%counter = 0
   end subroutine update
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! append:
+  !     takes values one by one and appends it to a
+  !     triplet format
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, value(realdp), row(int), col(int)
+  !     Output, -
   !***************************************************
   subroutine append(this, value, row, col)
     implicit none
@@ -162,12 +169,13 @@ contains
     this%triplet%col(this%counter) = col
   end subroutine append
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! makeCRS:
+  !     Once all values have been appended to the
+  !     triplet call this routine to make the CRS
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, -
+  !     Output, CRS is usable
   !***************************************************
   subroutine makeCRS(this)
     implicit none
@@ -204,12 +212,13 @@ contains
     this%nnz = size(this%AJ)
   end subroutine makeCRS
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! handleDuplicates:
+  !     Sums up every duplicate on the triplet, also
+  !     orders values in each row
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, -
+  !     Output, -
   !***************************************************
   subroutine handleDuplicates(this)
     implicit none
@@ -251,12 +260,13 @@ contains
     deallocate(valueVector)
   end subroutine HandleDuplicates
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! get:
+  !     Gives sparse matrix's value from row i
+  !     and col j
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, i(int), j(int)
+  !     Output, get(i,j)(realdp)
   !***************************************************
   real(dp) function get(this, i, j)
     implicit none
@@ -275,12 +285,13 @@ contains
     get = 0.d0
   end function get
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! printValue:
+  !     prints a single value either on console or a
+  !     given filename
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, i(int), j(int), filename(char)[opt]
+  !     Output, value printed
   !***************************************************
   subroutine printValue(this, i, j, filename)
     implicit none
@@ -298,12 +309,13 @@ contains
     end if
   end subroutine printValue
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! printNonZeros:
+  !     Prints all non zeros in a list like format,
+  !     either on console or on a given filename
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, filename(char)[opt]
+  !     Output, non zeros printed
   !***************************************************
   subroutine printNonZeros(this, filename)
     implicit none
@@ -328,12 +340,13 @@ contains
     end do
   end subroutine printNonZeros
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! printAll:
+  !     Prints the whole matrix, zeros included, on
+  !     console or on a filename if given.
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, filename(char)[opt]
+  !     Output, whole matrix printed
   !***************************************************
   subroutine printAll(this, filename)
     implicit none
@@ -356,12 +369,12 @@ contains
     end do
   end subroutine printAll
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! deleteRowAndCol:
+  !     Deletes a given row and column.
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, row(int), col(int)
+  !     Output, -
   !***************************************************
   subroutine deleteRowAndCol(this, row, col)
     Implicit none
@@ -424,12 +437,12 @@ contains
     this%n = this%n - 1
   end subroutine deleteRowAndCol
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! delete:
+  !     Clears memory space taken by the sparse matrix
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, -
+  !     Output, -
   !***************************************************
   subroutine delete(this)
     implicit none
@@ -447,12 +460,13 @@ contains
   
   
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! sparse_sparse_prod:
+  !     performs the product between two given sparse
+  !     matrices. Operator: (*).
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, a(Sparse), b(Sparse)
+  !     Output, c(Sparse)
   !***************************************************
   function sparse_sparse_prod(a, b) result(c)
     implicit none
@@ -490,12 +504,14 @@ contains
     call c%makeCRS
   end function sparse_sparse_prod
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! sparse_vect_prod(*):
+  !      Performs the product between a sparse matrix
+  !      and a condensed real vector.
+  !      Operator: (*).
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, mat(Sparse), vect(realdp)
+  !     Output, res(realdp)
   !***************************************************
   function sparse_vect_prod(mat, vect) result(res)
     implicit none
@@ -517,12 +533,13 @@ contains
     end do
   end function sparse_vect_prod
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! sparse_sparse_add:
+  !     performs the addition of sparse a plus
+  !     sparse b. Operator: (+).
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, a(Sparse), b(Sparse)
+  !     Output, c(Sparse)
   !***************************************************
   function sparse_sparse_add(a, b) result(c)
     implicit none
@@ -550,32 +567,64 @@ contains
     call c%makeCRS
   end function sparse_sparse_add
   !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
+  ! transpose:
+  !     Obtains the transpose of sparse matrix a
   !  
   ! Parameters:
-  !     Input, ...
-  !     Output, ...
+  !     Input, a(Sparse)
+  !     Output, b(Sparse)
   !***************************************************
-!!$  function transpose(a) result(b)
-!!$    implicit none
-!!$    type(Sparse), intent(in) :: a
-!!$    type(Sparse) :: b
-!!$    b = sparse(nnz = a%nnz, rows = a%n)
-!!$    Do i = 1, b%nnz
-!!$       colCounter(a%AJ(i)) = colCounter(a%AJ(i)) + 1
-!!$    end Do
-!!$    b%AI = 1
-!!$    do i = 1, b%n
-!!$       b%AI(i) = b%AI(i-1) + colCounter(i-1)
-!!$    end do
-!!$    do i = 1, a%n
-!!$       do j = a%AJ(i), a%AJ(i+1)-1
-!!$          b%AJ() = i
-!!$       
-!!$    
-!!$  end function transpose
-
+  function transpose(a) result(b)
+    implicit none
+    type(Sparse), intent(in) :: a
+    type(Sparse) :: b
+    integer, dimension(a%n) :: colCounter
+    integer :: i, j, k, counter
+    b = sparse(nnz = a%nnz, rows = a%n)
+    colCounter = 0
+    do i = 1, b%nnz
+       colCounter(a%AJ(i)) = colCounter(a%AJ(i)) + 1
+    end do
+    allocate(b%AI(b%n+1))
+    allocate(b%A(b%nnz))
+    allocate(b%AJ(b%nnz))
+    b%AI = 1
+    do i = 2, b%n+1
+       b%AI(i) = b%AI(i-1) + colCounter(i-1)
+    end do
+    counter = 1
+    colCounter = 0
+    do i = 1, b%n
+       do k = a%AI(i), a%AI(i+1)-1
+          j = a%AJ(k)
+          b%AJ(b%AI(j)+colCounter(j)) = i
+          b%A(b%AI(j)+colCounter(j)) = a%A(counter)
+          colCounter(j) = colCounter(j) + 1
+          counter = counter + 1
+       end do
+    end do
+  end function transpose
+  !***************************************************
+  ! norm:
+  !     Computes de frobenius-norm of a sparse matrix
+  !     https://en.wikipedia.org/wiki/Matrix_norm#Frobenius_norm
+  !  
+  ! Parameters:
+  !     Input, a(Sparse)
+  !     Output, norm(Realdp)
+  !***************************************************
+  real(dp) function norm(a)
+    implicit none
+    type(Sparse), intent(in) :: a
+    integer :: i, j, counter
+    norm = 0
+    counter = 1
+    do while(counter <= a%nnz)
+       norm = norm + a%A(counter)*a%A(counter)
+       counter = counter + 1
+    end do
+    norm = sqrt(norm)
+  end function norm
 
   
 end module SparseKit
