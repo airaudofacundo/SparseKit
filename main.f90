@@ -25,9 +25,9 @@ program Test
 
   call mat%printAll()
 
-  call mat%deleteRowAndCol(2,3)
+!!$  call mat%deleteRowAndCol(2,3)
 
-  call mat%printAll()
+!!$  call mat%printAll()
 
 end program Test
 
