@@ -38,6 +38,8 @@ module SparseKit
      integer, dimension(:), allocatable :: AI
      integer, dimension(:), allocatable :: AJ
      integer, dimension(:), allocatable :: rowCounter
+     integer :: n
+     integer :: nnz
      integer :: counter
      type(triplet) :: triplet
    contains
@@ -73,7 +75,7 @@ module SparseKit
   real(dp), dimension(:), allocatable :: auxA
   integer, dimension(:), allocatable :: auxAJ
   integer, dimension(:), allocatable :: rowVector
-  integer :: repeats, l, n, m
+  integer :: repeats, l
 
   
   interface sparse
@@ -101,11 +103,11 @@ contains
     class(Sparse), intent(InOut) :: this
     integer, intent(in) :: nnz
     integer, intent(in) :: rows
-    n = nnz
-    m = rows
-    allocate(this%triplet%A(n))
-    allocate(this%triplet%row(n))
-    allocate(this%triplet%col(n))
+    this%nnz = nnz
+    this%n = rows
+    allocate(this%triplet%A(this%nnz))
+    allocate(this%triplet%row(this%nnz))
+    allocate(this%triplet%col(this%nnz))
     this%triplet%A = 0
     this%triplet%row = 0
     this%triplet%col = 0
@@ -131,11 +133,11 @@ contains
     if(allocated(this%A)) then
        deallocate(this%A, this%AI, this%AJ)
     end if
-    n = nnz
-    m = rows
-    allocate(this%triplet%A(n))
-    allocate(this%triplet%row(n))
-    allocate(this%triplet%col(n))
+    this%nnz = nnz
+    this%n = rows
+    allocate(this%triplet%A(this%nnz))
+    allocate(this%triplet%row(this%nnz))
+    allocate(this%triplet%col(this%nnz))
     this%triplet%A = 0
     this%triplet%row = 0
     this%triplet%col = 0
@@ -172,7 +174,7 @@ contains
     class(Sparse), intent(InOut) :: this
     integer :: i
     isCRSDone = .true.
-    allocate(this%rowCounter(m))
+    allocate(this%rowCounter(this%n))
     !This%Counter entries in each row, including duplicates
     this%rowCounter = 0
     do i = 1, this%counter
@@ -191,13 +193,15 @@ contains
        this%AJ(i) = auxAJ(i)
     end do
     !Counstruct row pointers
-    allocate(this%AI(m+1))
+    allocate(this%AI(this%n+1))
     this%AI = 1
-    do i = 2, m+1
+    do i = 2, this%n+1
        this%AI(i) = this%AI(i-1) + this%rowCounter(i-1)
     end do
     deallocate(this%triplet%A, this%triplet%row, this%triplet%col)
     deallocate(auxA, auxAJ)
+    deallocate(this%rowCounter)
+    this%nnz = size(this%AJ)
   end subroutine makeCRS
   !***************************************************
   ! RutinaNombre:
@@ -216,7 +220,7 @@ contains
     allocate(valueVector(maxval(this%rowCounter)))
     this%counter = 1
     repeats = 0
-    do i = 1, m
+    do i = 1, this%n
        rowVector = this%triplet%col(this%counter+repeats:this%counter+repeats+this%rowCounter(i)-1)
        valueVector = this%triplet%A(this%counter+repeats:this%counter+repeats+this%rowCounter(i)-1)
        call quicksort(rowVector, valueVector, 1, this%rowCounter(i))
@@ -309,7 +313,7 @@ contains
     integer :: i, j
     if(present(filename)) then
        open(fileunit, file = trim(filename), access = 'append')
-       do i = 1, size(this%AI)-1
+       do i = 1, this%n
           do j = this%AI(i), this%AI(i+1)-1
              write(fileunit,'(A,I0,A,I0,A,E14.7)') 'Matriz value at row ', i, ' column ', this%AJ(j), ' is ', this%A(j)
           end do
@@ -340,15 +344,15 @@ contains
     if(present(filename)) then
        open(fileunit, file = trim(filename), access = 'append')
        write(fileunit, '(/,A,I0,A,I0)') 'Printing Sparse Matrix, size: ', size(this%AI)-1, 'x', size(this%AI)-1 
-       do i = 1, size(this%AI)-1
-          write(fileunit,'(*(E10.4,2X))') (this%get(i,j),j=1,size(this%AI)-1)
+       do i = 1, this%n
+          write(fileunit,'(*(E10.4,2X))') (this%get(i,j),j=1,this%n)
        end do
        close(fileunit)
        return
     end if
-    write(*, '(A,I0,A,I0)') 'Printing Sparse Matrix, size: ', size(this%AI)-1, 'x', size(this%AI)-1 
-    do i = 1, size(this%AI)-1
-       write(*,'(*(E10.4,2X))') (this%get(i,j),j=1,size(this%AI)-1)
+    write(*, '(A,I0,A,I0)') 'Printing Sparse Matrix, size: ', this%n, 'x', this%n
+    do i = 1, this%n
+       write(*,'(*(E10.4,2X))') (this%get(i,j),j=1,this%n)
     end do
   end subroutine printAll
   !***************************************************
@@ -365,60 +369,83 @@ contains
     integer, intent(in) :: row
     integer, intent(in) :: col
     integer :: i, j, k
-    integer :: rowSize, nnz
+    integer :: rowSize
     integer, dimension(:), allocatable :: AI
-    
+
     allocate(AI(size(this%AI)))
     do i = 1, size(AI)
        AI(i) = this%AI(i)
     end do
     deallocate(this%AI)
-    
-    nnz = size(this%AJ)
+
     if(isCRSDone) then
        do i = size(AI)-1, 1, -1
-             if(i == row) then
-                rowSize = AI(i+1)-AI(i)
-                k = AI(i)
-                do while(k < nnz-rowSize+1)
-                   this%AJ(k) = this%AJ(k+rowSize)
-                   this%A(k) = this%A(k+rowSize)
-                   k = k + 1
-                end do
-                nnz = nnz - rowSize
-                do k = row, size(AI)-1
-                   AI(k) = AI(k+1) - rowSize
-                end do
-             else 
-                do j = AI(i), AI(i+1)-1
-                   if(this%AJ(j) == col) then
-                      k = j
-                      do while(k < nnz)
-                         this%A(k) = this%A(k+1)
-                         this%AJ(k) = this%AJ(k+1)
-                         k = k + 1
-                      end do
-                      do k = i+1, size(AI)
-                         AI(k) = AI(k)-1
-                      end do
-                      nnz = nnz - 1
-                   end if
-                end do
-             end if
-          end do
-          do i = 1, nnz
-             if(this%AJ(i) > col) then
-                this%AJ(i) = this%AJ(i)-1
-             end if
-          end do
-          allocate(this%AI(size(AI)-1))
-          do i = 1, size(this%AI)
-             this%AI(i) = AI(i)
-          end do
-       else
-          
-       end if
+          if(i == row) then
+             rowSize = AI(i+1)-AI(i)
+             k = AI(i)
+             do while(k < this%nnz-rowSize+1)
+                this%AJ(k) = this%AJ(k+rowSize)
+                this%A(k) = this%A(k+rowSize)
+                k = k + 1
+             end do
+             this%nnz = this%nnz - rowSize
+             do k = row, size(AI)-1
+                AI(k) = AI(k+1) - rowSize
+             end do
+          else 
+             do j = AI(i), AI(i+1)-1
+                if(this%AJ(j) == col) then
+                   k = j
+                   do while(k < this%nnz)
+                      this%A(k) = this%A(k+1)
+                      this%AJ(k) = this%AJ(k+1)
+                      k = k + 1
+                   end do
+                   do k = i+1, size(AI)
+                      AI(k) = AI(k)-1
+                   end do
+                   this%nnz = this%nnz - 1
+                end if
+             end do
+          end if
+       end do
+       do i = 1, this%nnz
+          if(this%AJ(i) > col) then
+             this%AJ(i) = this%AJ(i)-1
+          end if
+       end do
+       allocate(this%AI(size(AI)-1))
+       do i = 1, size(this%AI)
+          this%AI(i) = AI(i)
+       end do
+    else
+
+    end if
+    this%n = this%n - 1
   end subroutine deleteRowAndCol
+  !***************************************************
+  ! RutinaNombre:
+  !     Descripcion asd asd as d 
+  !  
+  ! Parameters:
+  !     Input, ...
+  !     Output, ...
+  !***************************************************
+  subroutine delete(this)
+    implicit none
+    class(Sparse), intent(inout) :: this
+    if(allocated(this%A)) deallocate(this%A)
+    if(allocated(this%AJ)) deallocate(this%AJ)
+    if(allocated(this%AI)) deallocate(this%AI)
+  end subroutine delete
+
+
+
+  !***********************************************
+  !*              MODULE PROCEDURES              *
+  !***********************************************
+  
+  
   !***************************************************
   ! RutinaNombre:
   !     Descripcion asd asd as d 
@@ -435,15 +462,15 @@ contains
     real(dp) :: Cij
     integer :: i, j, k
     integer :: counter, aRowSize, bRowSize, ptr, l
-    if(size(a%AI) /= size(b%AI)) then
+    if(a%n /= b%n) then
        print'(A)', '** diferent sizes in input sparse matrices! **'
        return
     end if
-    c = sparse(nnz = size(a%AJ)*3, rows = size(a%AI)-1)
+    c = sparse(nnz = a%n*3, rows = a%n)
     counter = 1
-    do i = 1, size(a%AI)-1
+    do i = 1, a%n
        aRowSize = a%AI(i+1) - a%AI(i)
-       do j = 1, size(a%AI)-1
+       do j = 1, a%n
           Cij = 0
           do k = counter, counter+aRowSize-1
              ptr = b%AI(a%AJ(k))
@@ -479,7 +506,7 @@ contains
     integer :: counter, rowSize, i, k
     res = 0.d0
     counter = 1
-    do i = 1, size(mat%AI)-1
+    do i = 1, mat%n
        rowSize = mat%AI(i+1) - mat%AI(i)
        val = 0.d0
        do k = counter, counter+rowSize-1
@@ -503,9 +530,9 @@ contains
     type(Sparse), intent(in) :: b
     type(Sparse) :: c
     integer :: counter, rowSize, i, k
-    c = sparse(nnz = size(a%AJ)+size(b%AJ), rows = size(a%AI)-1)
+    c = sparse(nnz = a%nnz+b%nnz, rows = a%n)
     counter = 1
-    do i = 1, size(a%AI)-1
+    do i = 1, a%n
        rowSize = a%AI(i+1) - a%AI(i)
        do k = counter, counter+rowSize-1
           call c%append(a%A(k), i, a%AJ(k))
@@ -513,7 +540,7 @@ contains
        counter = counter + rowSize
     end do
     counter = 1
-    do i = 1, size(b%AI)-1
+    do i = 1, b%n
        rowSize = b%AI(i+1) - b%AI(i)
        do k = counter, counter+rowSize-1
           call c%append(b%A(k), i, b%AJ(k))
@@ -522,7 +549,32 @@ contains
     end do
     call c%makeCRS
   end function sparse_sparse_add
-  
+  !***************************************************
+  ! RutinaNombre:
+  !     Descripcion asd asd as d 
+  !  
+  ! Parameters:
+  !     Input, ...
+  !     Output, ...
+  !***************************************************
+!!$  function transpose(a) result(b)
+!!$    implicit none
+!!$    type(Sparse), intent(in) :: a
+!!$    type(Sparse) :: b
+!!$    b = sparse(nnz = a%nnz, rows = a%n)
+!!$    Do i = 1, b%nnz
+!!$       colCounter(a%AJ(i)) = colCounter(a%AJ(i)) + 1
+!!$    end Do
+!!$    b%AI = 1
+!!$    do i = 1, b%n
+!!$       b%AI(i) = b%AI(i-1) + colCounter(i-1)
+!!$    end do
+!!$    do i = 1, a%n
+!!$       do j = a%AJ(i), a%AJ(i+1)-1
+!!$          b%AJ() = i
+!!$       
+!!$    
+!!$  end function transpose
 
 
   
