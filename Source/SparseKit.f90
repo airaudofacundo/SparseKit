@@ -75,9 +75,9 @@ module SparseKit
   interface norm
      module procedure norm
   end interface norm
-!!$  interface gmres
-!!$     module procedure gmres 
-!!$  end interface gmres
+  interface gmres
+     module procedure gmres 
+  end interface gmres
   
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
@@ -629,266 +629,217 @@ contains
   end function norm
 
 !!$  !***************************************************
-!!$  ! RutinaNombre:
+!!$  ! RutinaNombre: gmres
 !!$  !     Descripcion asd asd as d 
 !!$  !  
 !!$  ! Parameters:
 !!$  !     Input, ...
 !!$  !     Output, ...
 !!$  !***************************************************
-!!$  subroutine gmres ( n, nzz, ia, ja, a, x, rhs, itr_max, mr, &
-!!$       tol_abs, tol_rel, verbose )
-!!$    implicit none
-!!$    integer :: mr
-!!$    integer :: n
-!!$    integer :: nzz
-!!$    real(rkind) :: a(nzz)
-!!$    real(rkind) :: av
-!!$    real(rkind) :: c(mr+1)
-!!$    real(rkind), parameter :: delta = 1.0D-03
-!!$    real(rkind) :: g(mr+1)
-!!$    real(rkind) :: h(mr+1,mr)
-!!$    real(rkind) :: htmp
-!!$    integer :: i
-!!$    integer :: ia(n+1)
-!!$    integer :: itr
-!!$    integer :: itr_max
-!!$    integer :: itr_used
-!!$    integer :: j
-!!$    integer :: ja(nzz)
-!!$    integer :: iw(n)
-!!$    integer :: jj
-!!$    integer :: jrow
-!!$    integer :: jw
-!!$    integer :: k
-!!$    integer :: k_copy
-!!$    real(rkind) :: tl 
-!!$    real(rkind) :: l(ia(n+1)+1)
-!!$    real(rkind) :: mu
-!!$    real(rkind) :: g1    
-!!$    real(rkind) :: g2
-!!$    real(rkind) :: r(n)
-!!$    real(rkind) :: rho
-!!$    real(rkind) :: rho_tol
-!!$    real(rkind) :: rhs(n)
-!!$    real(rkind) :: s(mr+1)
-!!$    real(rkind) :: tol_abs
-!!$    real(rkind) :: tol_rel
-!!$    integer :: ua(n)
-!!$    real(rkind) :: v(n,mr+1);
-!!$    logical :: verbose
-!!$    real(rkind) :: x(n)
-!!$    real(rkind) :: y(mr+1)
-!!$    real(rkind) :: w(n)
-!!$
-!!$    itr_used = 0
-!!$    ua(1:n) = -1
-!!$    do i = 1, n
-!!$       do k = ia(i), ia(i+1) - 1
-!!$          if ( ja(k) == i ) then
-!!$             ua(i) = k
-!!$          end if
-!!$       end do
-!!$    end do
-!!$    
-!!$    !! da l
-!!$    !
-!!$    !  Copy A.
-!!$    !
-!!$    l(1:nz_num) = a(1:nz_num)
-!!$    do i = 1, n
-!!$       !
-!!$       !  IW points to the nonzero entries in row I.
-!!$       !
-!!$       iw(1:n) = -1
-!!$       
-!!$       do k = ia(i), ia(i+1) - 1
-!!$          iw(ja(k)) = k
-!!$       end do
-!!$       
-!!$       do j = ia(i), ia(i+1) - 1
-!!$          jrow = ja(j)
-!!$          if ( i <= jrow ) then
-!!$             exit
-!!$          end if
-!!$          tl = l(j) * l(ua(jrow))
-!!$          l(j) = tl
-!!$          do jj = ua(jrow) + 1, ia(jrow+1) - 1
-!!$             jw = iw(ja(jj))
-!!$             if ( jw /= -1 ) then
-!!$                l(jw) = l(jw) - tl * l(jj)
-!!$             end if
-!!$          end do
-!!$       end do
-!!$
-!!$       ua(i) = j
-!!$       l(j) = 1.0D+00 / l(j)
-!!$
-!!$    end do
-!!$
-!!$    l(ua(1:n)) = 1.0D+00 / l(ua(1:n))
-!!$    
-!!$    do itr = 1, itr_max
-       !call ax_cr ( n, nzz, ia, ja, a, x, r ) !!!!! (r = A*x)
-!!$       
-!!$       r(1:n) = rhs(1:n) - r(1:n)
-!!$
-!!$!!!!! (l*u*r=r)
-!!$    !
-!!$    !  Copy R in.
-!!$    !
-!!$    w(1:n) = r(1:n)
-!!$    !
-!!$    !  Solve L * w = w where L is unit lower triangular.
-!!$    !
-!!$    do i = 2, n
-!!$       do j = ia(i), ua(i) - 1
-!!$          w(i) = w(i) - l(j) * w(ja(j))
-!!$       end do
-!!$    end do
-!!$    !
-!!$    !  Solve U * w = w, where U is upper triangular.
-!!$    !
-!!$    do i = n, 1, -1
-!!$       do j = ua(i) + 1, ia(i+1) - 1
-!!$          w(i) = w(i) - l(j) * w(ja(j))
-!!$       end do
-!!$       w(i) = w(i) / l(ua(i))
-!!$    end do
-!!$    !
-!!$    !  Copy Z out.
-!!$    !
-!!$    r(1:n) = w(1:n)
-!!$
-!!$       rho = sqrt ( dot_product ( r, r ) )
-!!$
-!!$       if ( verbose ) then
-!!$          write ( *, '(a,i4,a,g14.6)' ) '  ITR = ', itr, '  Residual = ', rho
-!!$       end if
-!!$
-!!$       if ( itr == 1 ) then
-!!$          rho_tol = rho * tol_rel
-!!$       end if
-!!$
-!!$       v(1:n,1) = r(1:n) / rho
-!!$
-!!$       g(1) = rho
-!!$       g(2:mr+1) = 0.0D+00
-!!$
-!!$       h(1:mr+1,1:mr) = 0.0D+00
-!!$
-!!$       do k = 1, mr
-!!$
-!!$          k_copy = k
-!!$
-          !call ax_cr ( n, nzz, ia, ja, a, v(1:n,k), v(1:n,k+1) ) 
-!!$
-          !call lus_cr ( n, nzz, ia, ja, l, ua, v(1:n,k+1), v(1:n,k+1) )
-!!$
-!!$    !
-!!$    !  Copy R in.
-!!$    !
-!!$    w(1:n) = v(1:n,k+1)
-!!$    !
-!!$    !  Solve L * w = w where L is unit lower triangular.
-!!$    !
-!!$    do i = 2, n
-!!$       do j = ia(i), ua(i) - 1
-!!$          w(i) = w(i) - l(j) * w(ja(j))
-!!$       end do
-!!$    end do
-!!$    !
-!!$    !  Solve U * w = w, where U is upper triangular.
-!!$    !
-!!$    do i = n, 1, -1
-!!$       do j = ua(i) + 1, ia(i+1) - 1
-!!$          w(i) = w(i) - l(j) * w(ja(j))
-!!$       end do
-!!$       w(i) = w(i) / l(ua(i))
-!!$    end do
-!!$    !
-!!$    !  Copy Z out.
-!!$    !
-!!$    v(1:n,k+1) = w(1:n)
-!!$
-!!$          av = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
-!!$
-!!$          do j = 1, k
-!!$             h(j,k) = dot_product ( v(1:n,k+1), v(1:n,j) )
-!!$             v(1:n,k+1) = v(1:n,k+1) - v(1:n,j) * h(j,k)
-!!$          end do
-!!$
-!!$          h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
-!!$
-!!$          if ( ( av + delta * h(k+1,k)) == av ) then
-!!$             do j = 1, k
-!!$                htmp = dot_product ( v(1:n,k+1), v(1:n,j) )
-!!$                h(j,k) = h(j,k) + htmp
-!!$                v(1:n,k+1) = v(1:n,k+1) - htmp * v(1:n,j)
-!!$             end do
-!!$             h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
-!!$          end if
-!!$
-!!$          if ( h(k+1,k) /= 0.0D+00 ) then
-!!$             v(1:n,k+1) = v(1:n,k+1) / h(k+1,k)
-!!$          end if
-!!$
-!!$          if ( 1 < k ) then
-!!$             y(1:k+1) = h(1:k+1,k)
-!!$             do j = 1, k - 1
-!!$
-!!$                g1 = c(j) * y(j) - s(j) * y(j+1)
-!!$                g2 = s(j) * y(j) + c(j) * y(j+1)
-!!$
-!!$                y(j)   = g1
-!!$                y(j+1) = g2
-!!$                
-!!$             end do
-!!$             h(1:k+1,k) = y(1:k+1)
-!!$          end if
-!!$
-!!$          mu = sqrt ( h(k,k)**2 + h(k+1,k)**2 )
-!!$
-!!$          c(k) = h(k,k) / mu
-!!$          s(k) = -h(k+1,k) / mu
-!!$          h(k,k) = c(k) * h(k,k) - s(k) * h(k+1,k)
-!!$          h(k+1,k) = 0.0D+00
-!!$
-!!$          g1 = c(k) * g(k) - s(k) * g(k+1)
-!!$          g2 = s(k) * g(k) + c(k) * g(k+1)
-!!$          
-!!$          g(k)   = g1
-!!$          g(k+1) = g2
-!!$
-!!$          rho = abs ( g(k+1) )
-!!$
-!!$          itr_used = itr_used + 1
-!!$
-!!$          if ( rho <= rho_tol .and. rho <= tol_abs ) then
-!!$             exit
-!!$          end if
-!!$
-!!$       end do
-!!$
-!!$       k = k_copy - 1
-!!$
-!!$       y(k+1) = g(k+1) / h(k+1,k+1)
-!!$
-!!$       do i = k, 1, -1
-!!$          y(i) = ( g(i) - dot_product ( h(i,i+1:k+1), y(i+1:k+1) ) ) / h(i,i)
-!!$       end do
-!!$
-!!$       do i = 1, n
-!!$          x(i) = x(i) + dot_product ( v(i,1:k+1), y(1:k+1) )
-!!$       end do
-!!$
-!!$       if ( rho <= rho_tol .and. rho <= tol_abs ) then
-!!$          exit
-!!$       end if
-!!$
-!!$    end do
-!!$    return
-!!$  end subroutine gmres
+  subroutine gmres (this, x, rhs)
+    implicit none
+    class(Sparse), intent(inout) :: this
+    integer :: mr
+    real(rkind) :: av
+    real(rkind) :: c(mr+1)
+    real(rkind) :: g(mr+1)
+    real(rkind) :: h(mr+1,mr)
+    real(rkind) :: htmp
+    integer :: i, j, k, n, nnz
+    integer :: itr
+    integer :: itr_used
+    integer :: iw(this%n)
+    integer :: jj
+    integer :: jrow
+    integer :: jw
+    integer :: k_copy
+    real(rkind) :: tl 
+    real(rkind) :: l(ia(this%n+1)+1)
+    real(rkind) :: mu
+    real(rkind) :: g1    
+    real(rkind) :: g2
+    real(rkind) :: r(this%n)
+    real(rkind) :: rho
+    real(rkind) :: rho_tol
+    real(rkind) :: rhs(this%n)
+    real(rkind) :: s(mr+1)
+    real(rkind) :: tol_rel
+    integer :: ua(this%n)
+    real(rkind) :: v(this%n,mr+1)
+    real(rkind) :: x(this%n)
+    real(rkind) :: y(mr+1)
+    real(rkind) :: w(this%n)
+    Integer, parameter :: itr_max = 1000
+    Real(rkind), parameter :: tol_abs = 1d-15
+    Real(rkind), parameter :: delta = 1.0D-03
+    Real(rkind), parameter :: tol_rel = 1d-15
+
+    n = this%n
+    nnz = this%nnz
+    mr = n-1
+    itr_used = 0
+    ua(1:n) = -1
+    do i = 1, n
+       do k = ia(i), ia(i+1) - 1
+          if ( ja(k) == i ) then
+             ua(i) = k
+          end if
+       end do
+    end do   
+    !! da l
+    !
+    !  Copy A.
+    !
+    l(1:nz_num) = a(1:nz_num)
+    do i = 1, n
+       !
+       !  IW points to the nonzero entries in row I.
+       !
+       iw(1:n) = -1       
+       do k = ia(i), ia(i+1) - 1
+          iw(ja(k)) = k
+       end do      
+       do j = ia(i), ia(i+1) - 1
+          jrow = ja(j)
+          if ( i <= jrow ) then
+             exit
+          end if
+          tl = l(j) * l(ua(jrow))
+          l(j) = tl
+          do jj = ua(jrow) + 1, ia(jrow+1) - 1
+             jw = iw(ja(jj))
+             if ( jw /= -1 ) then
+                l(jw) = l(jw) - tl * l(jj)
+             end if
+          end do
+       end do
+       ua(i) = j
+       l(j) = 1.0D+00 / l(j)
+    end do
+    l(ua(1:n)) = 1.0D+00 / l(ua(1:n))    
+    do itr = 1, itr_max
+       r = this*x
+       r(1:n) = rhs(1:n) - r(1:n)
+!!!!! (l*u*r=r)
+    !
+    !  Copy R in.
+    !
+    w(1:n) = r(1:n)
+    !
+    !  Solve L * w = w where L is unit lower triangular.
+    !
+    do i = 2, n
+       do j = ia(i), ua(i) - 1
+          w(i) = w(i) - l(j) * w(ja(j))
+       end do
+    end do
+    !
+    !  Solve U * w = w, where U is upper triangular.
+    !
+    do i = n, 1, -1
+       do j = ua(i) + 1, ia(i+1) - 1
+          w(i) = w(i) - l(j) * w(ja(j))
+       end do
+       w(i) = w(i) / l(ua(i))
+    end do
+    !
+    !  Copy Z out.
+    !
+    r(1:n) = w(1:n)
+       rho = sqrt ( dot_product ( r, r ) )
+       if ( itr == 1 ) then
+          rho_tol = rho * tol_rel
+       end if
+       v(1:n,1) = r(1:n) / rho
+       g(1) = rho
+       g(2:mr+1) = 0.0D+00
+       h(1:mr+1,1:mr) = 0.0D+00
+       do k = 1, mr
+          k_copy = k
+          v(1:n,k+1) = this* v(1:n,k)        
+!!!!! (l*u*r=r)
+    !
+    !  Copy R in.
+    !
+    w(1:n) = v(1:n,k+1)
+    !
+    !  Solve L * w = w where L is unit lower triangular.
+    !
+    do i = 2, n
+       do j = ia(i), ua(i) - 1
+          w(i) = w(i) - l(j) * w(ja(j))
+       end do
+    end do
+    !
+    !  Solve U * w = w, where U is upper triangular.
+    !
+    do i = n, 1, -1
+       do j = ua(i) + 1, ia(i+1) - 1
+          w(i) = w(i) - l(j) * w(ja(j))
+       end do
+       w(i) = w(i) / l(ua(i))
+    end do
+    !
+    !  Copy Z out.
+    !
+    v(1:n,k+1) = w(1:n)
+          av = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+          do j = 1, k
+             h(j,k) = dot_product ( v(1:n,k+1), v(1:n,j) )
+             v(1:n,k+1) = v(1:n,k+1) - v(1:n,j) * h(j,k)
+          end do
+          h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+          if ( ( av + delta * h(k+1,k)) == av ) then
+             do j = 1, k
+                htmp = dot_product ( v(1:n,k+1), v(1:n,j) )
+                h(j,k) = h(j,k) + htmp
+                v(1:n,k+1) = v(1:n,k+1) - htmp * v(1:n,j)
+             end do
+             h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+          end if
+          if ( h(k+1,k) /= 0.0D+00 ) then
+             v(1:n,k+1) = v(1:n,k+1) / h(k+1,k)
+          end if
+          if ( 1 < k ) then
+             y(1:k+1) = h(1:k+1,k)
+             do j = 1, k - 1
+                g1 = c(j) * y(j) - s(j) * y(j+1)
+                g2 = s(j) * y(j) + c(j) * y(j+1)
+                y(j)   = g1
+                y(j+1) = g2                
+             end do
+             h(1:k+1,k) = y(1:k+1)
+          end if
+          mu = sqrt ( h(k,k)**2 + h(k+1,k)**2 )
+          c(k) = h(k,k) / mu
+          s(k) = -h(k+1,k) / mu
+          h(k,k) = c(k) * h(k,k) - s(k) * h(k+1,k)
+          h(k+1,k) = 0.0D+00
+          g1 = c(k) * g(k) - s(k) * g(k+1)
+          g2 = s(k) * g(k) + c(k) * g(k+1)          
+          g(k)   = g1
+          g(k+1) = g2
+          rho = abs ( g(k+1) )
+          itr_used = itr_used + 1
+          if ( rho <= rho_tol .and. rho <= tol_abs ) then
+             exit
+          end if
+       end do
+       k = k_copy - 1
+
+       y(k+1) = g(k+1) / h(k+1,k+1)
+       do i = k, 1, -1
+          y(i) = ( g(i) - dot_product ( h(i,i+1:k+1), y(i+1:k+1) ) ) / h(i,i)
+       end do
+       do i = 1, n
+          x(i) = x(i) + dot_product ( v(i,1:k+1), y(1:k+1) )
+       end do
+       if ( rho <= rho_tol .and. rho <= tol_abs ) then
+          exit
+       end if
+    end do
+    return
+  end subroutine gmres
 !!$  
 !!$  !***************************************************
 !!$  ! RutinaNombre:
