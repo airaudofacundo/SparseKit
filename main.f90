@@ -26,15 +26,11 @@ program Test
 
   call mat%printAll
 
-<<<<<<< HEAD
 !!$  call mat%deleteRowAndCol(2,3)
 
 !!$  call mat%printAll()
-=======
   transMat = transpose(mat)
 
   call transMat%printAll
->>>>>>> d39176a91a441982af6e004e7566882ecbf92e3b
-
 end program Test
 

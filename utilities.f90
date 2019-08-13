@@ -3,10 +3,11 @@ Module tools
   Use, intrinsic :: iso_fortran_env
   Implicit none
 
-  Public :: sp, dp, qp 
+  Public :: sp, dp, qp, rkind
   Integer, parameter :: sp = REAL32
   Integer, parameter :: dp = REAL64
   Integer, parameter :: qp = REAL128
+  integer, parameter :: rkind = dp
 
   Interface assignment(=)
      Procedure assignAnyTypeToR8Scalar

@@ -28,13 +28,13 @@ module SparseKit
   private
   public :: Sparse, operator(*), operator(+), transpose, norm
   type Triplet
-     real(dp), dimension(:), allocatable :: A
+     real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
      integer, dimension(:), allocatable :: col
   end type Triplet
   type Sparse
      private
-     real(dp), dimension(:), allocatable :: A
+     real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: AI
      integer, dimension(:), allocatable :: AJ
      integer, dimension(:), allocatable :: rowCounter
@@ -75,16 +75,16 @@ module SparseKit
   interface norm
      module procedure norm
   end interface norm
-  interface gmres
-     module procedure gmres 
-  end interface gmre
+!!$  interface gmres
+!!$     module procedure gmres 
+!!$  end interface gmres
   
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
   !***********************************************
   logical :: isCRSDone = .false.
-  real(dp), dimension(:), allocatable :: valueVector
-  real(dp), dimension(:), allocatable :: auxA
+  real(rkind), dimension(:), allocatable :: valueVector
+  real(rkind), dimension(:), allocatable :: auxA
   integer, dimension(:), allocatable :: auxAJ
   integer, dimension(:), allocatable :: rowVector
   integer :: repeats, l
@@ -157,7 +157,7 @@ contains
   !     triplet format
   !  
   ! Parameters:
-  !     Input, value(realdp), row(int), col(int)
+  !     Input, value(realrkind), row(int), col(int)
   !     Output, -
   !***************************************************
   subroutine append(this, value, row, col)
@@ -268,9 +268,9 @@ contains
   !  
   ! Parameters:
   !     Input, i(int), j(int)
-  !     Output, get(i,j)(realdp)
+  !     Output, get(i,j)(realrkind)
   !***************************************************
-  real(dp) function get(this, i, j)
+  real(rkind) function get(this, i, j)
     implicit none
     class(Sparse), intent(inout) :: this
     integer, intent(in) :: i
@@ -475,7 +475,7 @@ contains
     type(Sparse), intent(in) :: a
     type(Sparse), intent(in) :: b
     type(Sparse) :: c
-    real(dp) :: Cij
+    real(rkind) :: Cij
     integer :: i, j, k
     integer :: counter, aRowSize, bRowSize, ptr, l
     if(a%n /= b%n) then
@@ -512,15 +512,15 @@ contains
   !      Operator: (*).
   !  
   ! Parameters:
-  !     Input, mat(Sparse), vect(realdp)
-  !     Output, res(realdp)
+  !     Input, mat(Sparse), vect(realrkind)
+  !     Output, res(realrkind)
   !***************************************************
   function sparse_vect_prod(mat, vect) result(res)
     implicit none
     type(Sparse), intent(in) :: mat
-    real(dp), dimension(:), intent(in) :: vect
-    real(dp), dimension(size(vect)) :: res
-    real(dp) :: val
+    real(rkind), dimension(:), intent(in) :: vect
+    real(rkind), dimension(size(vect)) :: res
+    real(rkind) :: val
     integer :: counter, rowSize, i, k
     res = 0.d0
     counter = 1
@@ -613,9 +613,9 @@ contains
   !  
   ! Parameters:
   !     Input, a(Sparse)
-  !     Output, norm(Realdp)
+  !     Output, norm(Realrkind)
   !***************************************************
-  real(dp) function norm(a)
+  real(rkind) function norm(a)
     implicit none
     type(Sparse), intent(in) :: a
     integer :: i, j, counter
@@ -628,308 +628,308 @@ contains
     norm = sqrt(norm)
   end function norm
 
-  !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
-  !  
-  ! Parameters:
-  !     Input, ...
-  !     Output, ...
-  !***************************************************
-  subroutine gmres ( n, nzz, ia, ja, a, x, rhs, itr_max, mr, &
-       tol_abs, tol_rel, verbose )
-    implicit none
-    integer :: mr
-    integer :: n
-    integer :: nzz
-    real(dp) :: a(nzz)
-    real(dp) :: av
-    real(dp) :: c(mr+1)
-    real(dp), parameter :: delta = 1.0D-03
-    real(dp) :: g(mr+1)
-    real(dp) :: h(mr+1,mr)
-    real(dp) :: htmp
-    integer :: i
-    integer :: ia(n+1)
-    integer :: itr
-    integer :: itr_max
-    integer :: itr_used
-    integer :: j
-    integer :: ja(nzz)
-    integer :: iw(n)
-    integer :: jj
-    integer :: jrow
-    integer :: jw
-    integer :: k
-    integer :: k_copy
-    real(dp) :: tl 
-    real(dp) :: l(ia(n+1)+1)
-    real(dp) :: mu
-    real(dp) :: g1    
-    real(dp) :: g2
-    real(dp) :: r(n)
-    real(dp) :: rho
-    real(dp) :: rho_tol
-    real(dp) :: rhs(n)
-    real(dp) :: s(mr+1)
-    real(dp) :: tol_abs
-    real(dp) :: tol_rel
-    integer :: ua(n)
-    real(dp) :: v(n,mr+1);
-    logical :: verbose
-    real(dp) :: x(n)
-    real(dp) :: y(mr+1)
-    real(dp) :: w(n)
-
-    itr_used = 0
-    ua(1:n) = -1
-    do i = 1, n
-       do k = ia(i), ia(i+1) - 1
-          if ( ja(k) == i ) then
-             ua(i) = k
-          end if
-       end do
-    end do
-    
-    !! da l
-    !
-    !  Copy A.
-    !
-    l(1:nz_num) = a(1:nz_num)
-    do i = 1, n
-       !
-       !  IW points to the nonzero entries in row I.
-       !
-       iw(1:n) = -1
-       
-       do k = ia(i), ia(i+1) - 1
-          iw(ja(k)) = k
-       end do
-       
-       do j = ia(i), ia(i+1) - 1
-          jrow = ja(j)
-          if ( i <= jrow ) then
-             exit
-          end if
-          tl = l(j) * l(ua(jrow))
-          l(j) = tl
-          do jj = ua(jrow) + 1, ia(jrow+1) - 1
-             jw = iw(ja(jj))
-             if ( jw /= -1 ) then
-                l(jw) = l(jw) - tl * l(jj)
-             end if
-          end do
-       end do
-
-       ua(i) = j
-       l(j) = 1.0D+00 / l(j)
-
-    end do
-
-    l(ua(1:n)) = 1.0D+00 / l(ua(1:n))
-    
-    do itr = 1, itr_max
-!!$       call ax_cr ( n, nzz, ia, ja, a, x, r ) !!!!! (r = A*x)
-       
-       r(1:n) = rhs(1:n) - r(1:n)
-
-!!!!! (l*u*r=r)
-    !
-    !  Copy R in.
-    !
-    w(1:n) = r(1:n)
-    !
-    !  Solve L * w = w where L is unit lower triangular.
-    !
-    do i = 2, n
-       do j = ia(i), ua(i) - 1
-          w(i) = w(i) - l(j) * w(ja(j))
-       end do
-    end do
-    !
-    !  Solve U * w = w, where U is upper triangular.
-    !
-    do i = n, 1, -1
-       do j = ua(i) + 1, ia(i+1) - 1
-          w(i) = w(i) - l(j) * w(ja(j))
-       end do
-       w(i) = w(i) / l(ua(i))
-    end do
-    !
-    !  Copy Z out.
-    !
-    r(1:n) = w(1:n)
-
-       rho = sqrt ( dot_product ( r, r ) )
-
-       if ( verbose ) then
-          write ( *, '(a,i4,a,g14.6)' ) '  ITR = ', itr, '  Residual = ', rho
-       end if
-
-       if ( itr == 1 ) then
-          rho_tol = rho * tol_rel
-       end if
-
-       v(1:n,1) = r(1:n) / rho
-
-       g(1) = rho
-       g(2:mr+1) = 0.0D+00
-
-       h(1:mr+1,1:mr) = 0.0D+00
-
-       do k = 1, mr
-
-          k_copy = k
-
-!!$          call ax_cr ( n, nzz, ia, ja, a, v(1:n,k), v(1:n,k+1) ) 
-
-!!$          call lus_cr ( n, nzz, ia, ja, l, ua, v(1:n,k+1), v(1:n,k+1) )
-
-    !
-    !  Copy R in.
-    !
-    w(1:n) = v(1:n,k+1)
-    !
-    !  Solve L * w = w where L is unit lower triangular.
-    !
-    do i = 2, n
-       do j = ia(i), ua(i) - 1
-          w(i) = w(i) - l(j) * w(ja(j))
-       end do
-    end do
-    !
-    !  Solve U * w = w, where U is upper triangular.
-    !
-    do i = n, 1, -1
-       do j = ua(i) + 1, ia(i+1) - 1
-          w(i) = w(i) - l(j) * w(ja(j))
-       end do
-       w(i) = w(i) / l(ua(i))
-    end do
-    !
-    !  Copy Z out.
-    !
-    v(1:n,k+1) = w(1:n)
-
-          av = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
-
-          do j = 1, k
-             h(j,k) = dot_product ( v(1:n,k+1), v(1:n,j) )
-             v(1:n,k+1) = v(1:n,k+1) - v(1:n,j) * h(j,k)
-          end do
-
-          h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
-
-          if ( ( av + delta * h(k+1,k)) == av ) then
-             do j = 1, k
-                htmp = dot_product ( v(1:n,k+1), v(1:n,j) )
-                h(j,k) = h(j,k) + htmp
-                v(1:n,k+1) = v(1:n,k+1) - htmp * v(1:n,j)
-             end do
-             h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
-          end if
-
-          if ( h(k+1,k) /= 0.0D+00 ) then
-             v(1:n,k+1) = v(1:n,k+1) / h(k+1,k)
-          end if
-
-          if ( 1 < k ) then
-             y(1:k+1) = h(1:k+1,k)
-             do j = 1, k - 1
-
-                g1 = c(j) * y(j) - s(j) * y(j+1)
-                g2 = s(j) * y(j) + c(j) * y(j+1)
-
-                y(j)   = g1
-                y(j+1) = g2
-                
-             end do
-             h(1:k+1,k) = y(1:k+1)
-          end if
-
-          mu = sqrt ( h(k,k)**2 + h(k+1,k)**2 )
-
-          c(k) = h(k,k) / mu
-          s(k) = -h(k+1,k) / mu
-          h(k,k) = c(k) * h(k,k) - s(k) * h(k+1,k)
-          h(k+1,k) = 0.0D+00
-
-          g1 = c(k) * g(k) - s(k) * g(k+1)
-          g2 = s(k) * g(k) + c(k) * g(k+1)
-          
-          g(k)   = g1
-          g(k+1) = g2
-
-          rho = abs ( g(k+1) )
-
-          itr_used = itr_used + 1
-
-          if ( rho <= rho_tol .and. rho <= tol_abs ) then
-             exit
-          end if
-
-       end do
-
-       k = k_copy - 1
-
-       y(k+1) = g(k+1) / h(k+1,k+1)
-
-       do i = k, 1, -1
-          y(i) = ( g(i) - dot_product ( h(i,i+1:k+1), y(i+1:k+1) ) ) / h(i,i)
-       end do
-
-       do i = 1, n
-          x(i) = x(i) + dot_product ( v(i,1:k+1), y(1:k+1) )
-       end do
-
-       if ( rho <= rho_tol .and. rho <= tol_abs ) then
-          exit
-       end if
-
-    end do
-    return
-  end subroutine gmres
-  
-  !***************************************************
-  ! RutinaNombre:
-  !     Descripcion asd asd as d 
-  !  
-  ! Parameters:
-  !     Input, ...
-  !     Output, ...
-  !***************************************************
-     subroutine getInverse(this,n,A,inverse)
-    Class(Poisson1DType), Intent(InOut) :: this
-    type(sparseType) :: A
-    type(sparseType) :: inverse
-    real(dp) :: y(n),x(n)
-    Integer :: n
-    Integer, parameter :: ITR_MAX = 1000
-    Real(dp), parameter :: TOL_ABS = 1d-15
-    Call inverse%init(nnz = 16*this%domain%nElem, rows = this%domain%nNodes)
-    do j = 1,this%domain%nNodes
-       y = 0.
-       y(j) = 1.
-       
-       Call pmgmres_ilu_cr(                &
-              n = n                        &
-            , nz_num = size(A%A)           &
-            , ia = A%AI                    &
-            , ja = A%AJ                    &
-            , a = A%A                      &
-            , x = x                        &
-            , rhs = y                      &
-            , itr_max = ITR_MAX            &
-            , mr = n-1                     &
-            , tol_abs = TOL_ABS            &
-            , tol_rel = 1d-15              &
-            , verbose = .false.           )
-       do i = 1, n
-          if(abs(x(i)).gt.1d-5)then
-             Call inverse%append(value = x(i), row = i, col = j)
-          end if
-       end do
-    end do
-    Call inverse%getSparse
-  end subroutine getInverse
+!!$  !***************************************************
+!!$  ! RutinaNombre:
+!!$  !     Descripcion asd asd as d 
+!!$  !  
+!!$  ! Parameters:
+!!$  !     Input, ...
+!!$  !     Output, ...
+!!$  !***************************************************
+!!$  subroutine gmres ( n, nzz, ia, ja, a, x, rhs, itr_max, mr, &
+!!$       tol_abs, tol_rel, verbose )
+!!$    implicit none
+!!$    integer :: mr
+!!$    integer :: n
+!!$    integer :: nzz
+!!$    real(rkind) :: a(nzz)
+!!$    real(rkind) :: av
+!!$    real(rkind) :: c(mr+1)
+!!$    real(rkind), parameter :: delta = 1.0D-03
+!!$    real(rkind) :: g(mr+1)
+!!$    real(rkind) :: h(mr+1,mr)
+!!$    real(rkind) :: htmp
+!!$    integer :: i
+!!$    integer :: ia(n+1)
+!!$    integer :: itr
+!!$    integer :: itr_max
+!!$    integer :: itr_used
+!!$    integer :: j
+!!$    integer :: ja(nzz)
+!!$    integer :: iw(n)
+!!$    integer :: jj
+!!$    integer :: jrow
+!!$    integer :: jw
+!!$    integer :: k
+!!$    integer :: k_copy
+!!$    real(rkind) :: tl 
+!!$    real(rkind) :: l(ia(n+1)+1)
+!!$    real(rkind) :: mu
+!!$    real(rkind) :: g1    
+!!$    real(rkind) :: g2
+!!$    real(rkind) :: r(n)
+!!$    real(rkind) :: rho
+!!$    real(rkind) :: rho_tol
+!!$    real(rkind) :: rhs(n)
+!!$    real(rkind) :: s(mr+1)
+!!$    real(rkind) :: tol_abs
+!!$    real(rkind) :: tol_rel
+!!$    integer :: ua(n)
+!!$    real(rkind) :: v(n,mr+1);
+!!$    logical :: verbose
+!!$    real(rkind) :: x(n)
+!!$    real(rkind) :: y(mr+1)
+!!$    real(rkind) :: w(n)
+!!$
+!!$    itr_used = 0
+!!$    ua(1:n) = -1
+!!$    do i = 1, n
+!!$       do k = ia(i), ia(i+1) - 1
+!!$          if ( ja(k) == i ) then
+!!$             ua(i) = k
+!!$          end if
+!!$       end do
+!!$    end do
+!!$    
+!!$    !! da l
+!!$    !
+!!$    !  Copy A.
+!!$    !
+!!$    l(1:nz_num) = a(1:nz_num)
+!!$    do i = 1, n
+!!$       !
+!!$       !  IW points to the nonzero entries in row I.
+!!$       !
+!!$       iw(1:n) = -1
+!!$       
+!!$       do k = ia(i), ia(i+1) - 1
+!!$          iw(ja(k)) = k
+!!$       end do
+!!$       
+!!$       do j = ia(i), ia(i+1) - 1
+!!$          jrow = ja(j)
+!!$          if ( i <= jrow ) then
+!!$             exit
+!!$          end if
+!!$          tl = l(j) * l(ua(jrow))
+!!$          l(j) = tl
+!!$          do jj = ua(jrow) + 1, ia(jrow+1) - 1
+!!$             jw = iw(ja(jj))
+!!$             if ( jw /= -1 ) then
+!!$                l(jw) = l(jw) - tl * l(jj)
+!!$             end if
+!!$          end do
+!!$       end do
+!!$
+!!$       ua(i) = j
+!!$       l(j) = 1.0D+00 / l(j)
+!!$
+!!$    end do
+!!$
+!!$    l(ua(1:n)) = 1.0D+00 / l(ua(1:n))
+!!$    
+!!$    do itr = 1, itr_max
+       !call ax_cr ( n, nzz, ia, ja, a, x, r ) !!!!! (r = A*x)
+!!$       
+!!$       r(1:n) = rhs(1:n) - r(1:n)
+!!$
+!!$!!!!! (l*u*r=r)
+!!$    !
+!!$    !  Copy R in.
+!!$    !
+!!$    w(1:n) = r(1:n)
+!!$    !
+!!$    !  Solve L * w = w where L is unit lower triangular.
+!!$    !
+!!$    do i = 2, n
+!!$       do j = ia(i), ua(i) - 1
+!!$          w(i) = w(i) - l(j) * w(ja(j))
+!!$       end do
+!!$    end do
+!!$    !
+!!$    !  Solve U * w = w, where U is upper triangular.
+!!$    !
+!!$    do i = n, 1, -1
+!!$       do j = ua(i) + 1, ia(i+1) - 1
+!!$          w(i) = w(i) - l(j) * w(ja(j))
+!!$       end do
+!!$       w(i) = w(i) / l(ua(i))
+!!$    end do
+!!$    !
+!!$    !  Copy Z out.
+!!$    !
+!!$    r(1:n) = w(1:n)
+!!$
+!!$       rho = sqrt ( dot_product ( r, r ) )
+!!$
+!!$       if ( verbose ) then
+!!$          write ( *, '(a,i4,a,g14.6)' ) '  ITR = ', itr, '  Residual = ', rho
+!!$       end if
+!!$
+!!$       if ( itr == 1 ) then
+!!$          rho_tol = rho * tol_rel
+!!$       end if
+!!$
+!!$       v(1:n,1) = r(1:n) / rho
+!!$
+!!$       g(1) = rho
+!!$       g(2:mr+1) = 0.0D+00
+!!$
+!!$       h(1:mr+1,1:mr) = 0.0D+00
+!!$
+!!$       do k = 1, mr
+!!$
+!!$          k_copy = k
+!!$
+          !call ax_cr ( n, nzz, ia, ja, a, v(1:n,k), v(1:n,k+1) ) 
+!!$
+          !call lus_cr ( n, nzz, ia, ja, l, ua, v(1:n,k+1), v(1:n,k+1) )
+!!$
+!!$    !
+!!$    !  Copy R in.
+!!$    !
+!!$    w(1:n) = v(1:n,k+1)
+!!$    !
+!!$    !  Solve L * w = w where L is unit lower triangular.
+!!$    !
+!!$    do i = 2, n
+!!$       do j = ia(i), ua(i) - 1
+!!$          w(i) = w(i) - l(j) * w(ja(j))
+!!$       end do
+!!$    end do
+!!$    !
+!!$    !  Solve U * w = w, where U is upper triangular.
+!!$    !
+!!$    do i = n, 1, -1
+!!$       do j = ua(i) + 1, ia(i+1) - 1
+!!$          w(i) = w(i) - l(j) * w(ja(j))
+!!$       end do
+!!$       w(i) = w(i) / l(ua(i))
+!!$    end do
+!!$    !
+!!$    !  Copy Z out.
+!!$    !
+!!$    v(1:n,k+1) = w(1:n)
+!!$
+!!$          av = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+!!$
+!!$          do j = 1, k
+!!$             h(j,k) = dot_product ( v(1:n,k+1), v(1:n,j) )
+!!$             v(1:n,k+1) = v(1:n,k+1) - v(1:n,j) * h(j,k)
+!!$          end do
+!!$
+!!$          h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+!!$
+!!$          if ( ( av + delta * h(k+1,k)) == av ) then
+!!$             do j = 1, k
+!!$                htmp = dot_product ( v(1:n,k+1), v(1:n,j) )
+!!$                h(j,k) = h(j,k) + htmp
+!!$                v(1:n,k+1) = v(1:n,k+1) - htmp * v(1:n,j)
+!!$             end do
+!!$             h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+!!$          end if
+!!$
+!!$          if ( h(k+1,k) /= 0.0D+00 ) then
+!!$             v(1:n,k+1) = v(1:n,k+1) / h(k+1,k)
+!!$          end if
+!!$
+!!$          if ( 1 < k ) then
+!!$             y(1:k+1) = h(1:k+1,k)
+!!$             do j = 1, k - 1
+!!$
+!!$                g1 = c(j) * y(j) - s(j) * y(j+1)
+!!$                g2 = s(j) * y(j) + c(j) * y(j+1)
+!!$
+!!$                y(j)   = g1
+!!$                y(j+1) = g2
+!!$                
+!!$             end do
+!!$             h(1:k+1,k) = y(1:k+1)
+!!$          end if
+!!$
+!!$          mu = sqrt ( h(k,k)**2 + h(k+1,k)**2 )
+!!$
+!!$          c(k) = h(k,k) / mu
+!!$          s(k) = -h(k+1,k) / mu
+!!$          h(k,k) = c(k) * h(k,k) - s(k) * h(k+1,k)
+!!$          h(k+1,k) = 0.0D+00
+!!$
+!!$          g1 = c(k) * g(k) - s(k) * g(k+1)
+!!$          g2 = s(k) * g(k) + c(k) * g(k+1)
+!!$          
+!!$          g(k)   = g1
+!!$          g(k+1) = g2
+!!$
+!!$          rho = abs ( g(k+1) )
+!!$
+!!$          itr_used = itr_used + 1
+!!$
+!!$          if ( rho <= rho_tol .and. rho <= tol_abs ) then
+!!$             exit
+!!$          end if
+!!$
+!!$       end do
+!!$
+!!$       k = k_copy - 1
+!!$
+!!$       y(k+1) = g(k+1) / h(k+1,k+1)
+!!$
+!!$       do i = k, 1, -1
+!!$          y(i) = ( g(i) - dot_product ( h(i,i+1:k+1), y(i+1:k+1) ) ) / h(i,i)
+!!$       end do
+!!$
+!!$       do i = 1, n
+!!$          x(i) = x(i) + dot_product ( v(i,1:k+1), y(1:k+1) )
+!!$       end do
+!!$
+!!$       if ( rho <= rho_tol .and. rho <= tol_abs ) then
+!!$          exit
+!!$       end if
+!!$
+!!$    end do
+!!$    return
+!!$  end subroutine gmres
+!!$  
+!!$  !***************************************************
+!!$  ! RutinaNombre:
+!!$  !     Descripcion asd asd as d 
+!!$  !  
+!!$  ! Parameters:
+!!$  !     Input, ...
+!!$  !     Output, ...
+!!$  !***************************************************
+!!$  subroutine getInverse(this,n,A,inverse)
+!!$    Class(Poisson1DType), Intent(InOut) :: this
+!!$    type(sparseType) :: A
+!!$    type(sparseType) :: inverse
+!!$    real(rkind) :: y(n),x(n)
+!!$    Integer :: n
+!!$    Integer, parameter :: ITR_MAX = 1000
+!!$    Real(rkind), parameter :: TOL_ABS = 1d-15
+!!$    Call inverse%init(nnz = 16*this%domain%nElem, rows = this%domain%nNodes)
+!!$    do j = 1,this%domain%nNodes
+!!$       y = 0.
+!!$       y(j) = 1.
+!!$       
+!!$       Call pmgmres_ilu_cr(                &
+!!$              n = n                        &
+!!$            , nz_num = size(A%A)           &
+!!$            , ia = A%AI                    &
+!!$            , ja = A%AJ                    &
+!!$            , a = A%A                      &
+!!$            , x = x                        &
+!!$            , rhs = y                      &
+!!$            , itr_max = ITR_MAX            &
+!!$            , mr = n-1                     &
+!!$            , tol_abs = TOL_ABS            &
+!!$            , tol_rel = 1d-15              &
+!!$            , verbose = .false.           )
+!!$       do i = 1, n
+!!$          if(abs(x(i)).gt.1d-5)then
+!!$             Call inverse%append(value = x(i), row = i, col = j)
+!!$          end if
+!!$       end do
+!!$    end do
+!!$    Call inverse%getSparse
+!!$  end subroutine getInverse
 end module SparseKit
