@@ -28,7 +28,7 @@ module SparseKit
   implicit none
   private
   public :: Sparse, operator(*), operator(+), transpose, norm&
-            , gmres, inverse
+            , gmres, inverse, jacobiEigen
   type Triplet
      real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
@@ -83,6 +83,9 @@ module SparseKit
   interface inverse
      module procedure inverse
   end interface inverse
+  interface jacobiEigen
+     module procedure jacobiEigen
+  end interface jacobiEigen
   
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
@@ -832,4 +835,146 @@ contains
     call B%makeCRS
     return
   end function Inverse
+  !***************************************************
+  ! jacobiEigen:
+  !    Obtains the eigenvalues and eigenvectors of a
+  !    real symmetric matrix A, using Rutishauser's
+  !    modfications of the classical Jacobi rotation
+  !    method with threshold pivoting.
+  !
+  ! Parameters:
+  !     Input, A(Sparse)
+  !     Output, Eigenvec, the matrix of eigenvectors
+  !     Output, Eigenval, the eigenvalues.
+  !***************************************************
+  subroutine jacobiEigen(A_input, Eigenval, Eigenvec) 
+    implicit none
+    type(Sparse), intent(in) :: A_input
+    real(rkind), intent(out) :: Eigenval(A_input%n),Eigenvec(A_input%n,A_input%n)
+    integer, parameter :: it_max = 1000
+    integer :: i, j, k, l, m, p, q, it_num, rot_num
+    real(rkind) :: a(A_input%n,A_input%n), bw(A_input%n),  w(A_input%n), zw(A_input%n) 
+    real(rkind) :: h, s, t, tau, term, termp, termq, theta, c, g, thresh, gapq
+    a = 0.
+    Do i = 1, A_input%n
+       Do j = A_input%AI(i), A_input%AI(i+1)-1
+          a(i, A_input%AJ(j))  = A_input%A(j)
+       End Do
+    End Do
+    Eigenvec = 0.
+    do i = 1, A_input%n
+       Eigenvec(i,i) = 1.
+    end do
+    do i = 1, A_input%n
+       Eigenval(i) = a(i,i)
+    end do
+    bw(1:A_input%n) = Eigenval(1:A_input%n)
+  zw(1:A_input%n) = 0.
+  it_num = 0
+  rot_num = 0
+  do while ( it_num < it_max )
+     it_num = it_num + 1
+     !  The convergence threshold is based on the size of the elements in
+     !  the strict upper triangle of the matrix.
+     thresh = 0.
+     do j = 1, A_input%n
+        do i = 1, j - 1
+           thresh = thresh + a(i,j) ** 2
+        end do
+     end do
+     thresh = sqrt ( thresh ) / (4.*A_input%n)
+     if ( thresh == 0. ) then
+        exit 
+     end if
+     do p = 1, A_input%n
+        do q = p + 1, A_input%n
+           gapq = 10. * abs ( a(p,q) )
+           termp = gapq + abs ( Eigenval(p) )
+           termq = gapq + abs ( Eigenval(q) )
+           !  Annihilate tiny offdiagonal elements.
+           if ( 4 < it_num .and. &
+                termp == abs ( Eigenval(p) ) .and. &
+                termq == abs ( Eigenval(q) ) ) then
+              a(p,q) = 0.
+              !  Otherwise, apply a rotation.
+           else if ( thresh <= abs ( a(p,q) ) ) then
+              h = Eigenval(q) - Eigenval(p)
+              term = abs ( h ) + gapq
+              if ( term == abs ( h ) ) then
+                 t = a(p,q) / h
+              else
+                 theta = 0.5 * h / a(p,q)
+                 t = 1. / ( abs ( theta ) + sqrt ( 1. + theta * theta ) )
+                 if ( theta < 0. ) then 
+                    t = - t
+                 end if
+              end if
+              c = 1. / sqrt ( 1. + t * t )
+              s = t * c
+              tau = s / ( 1. + c )
+              h = t * a(p,q)
+              !  Accumulate corrections to diagonal elements.
+              zw(p) = zw(p) - h                  
+              zw(q) = zw(q) + h
+              Eigenval(p) = Eigenval(p) - h
+              Eigenval(q) = Eigenval(q) + h
+              a(p,q) = 0.
+              !  Rotate, using information from the upper triangle of A only.
+              do j = 1, p - 1
+                 g = a(j,p)
+                 h = a(j,q)
+                 a(j,p) = g - s * ( h + g * tau )
+            a(j,q) = h + s * ( g - h * tau )
+         end do
+         do j = p + 1, q - 1
+            g = a(p,j)
+            h = a(j,q)
+            a(p,j) = g - s * ( h + g * tau )
+            a(j,q) = h + s * ( g - h * tau )
+         end do
+         do j = q + 1, A_input%n
+            g = a(p,j)
+            h = a(q,j)
+            a(p,j) = g - s * ( h + g * tau )
+            a(q,j) = h + s * ( g - h * tau )
+         end do
+         !  Accumulate information in the eigenvector matrix.
+         do j = 1, A_input%n
+            g = Eigenvec(j,p)
+            h = Eigenvec(j,q)
+            Eigenvec(j,p) = g - s * ( h + g * tau )
+            Eigenvec(j,q) = h + s * ( g - h * tau )
+         end do
+          rot_num = rot_num + 1
+       end if
+    end do
+ end do
+ bw(1:A_input%n) = bw(1:A_input%n) + zw(1:A_input%n)
+ Eigenval(1:A_input%n) = bw(1:A_input%n)
+ zw(1:A_input%n) = 0.
+end do
+!  Restore upper triangle of input matrix.
+  do j = 1, A_input%n
+     do i = 1, j - 1
+        a(i,j) = a(j,i)
+     end do
+  end do
+  !  Ascending sort the eigenvalues and eigenvectors.
+  do k = 1, A_input%n - 1
+     m = k
+     do l = k + 1, A_input%n
+        if ( Eigenval(l) < Eigenval(m) ) then
+           m = l
+        end if
+     end do
+     if ( m /= k ) then
+        t    = Eigenval(m)
+        Eigenval(m) = Eigenval(k)
+        Eigenval(k) = t
+        w(1:A_input%n)   = Eigenvec(1:A_input%n,m)
+        Eigenvec(1:A_input%n,m) = Eigenvec(1:A_input%n,k)
+        Eigenvec(1:A_input%n,k) = w(1:A_input%n)
+     end if
+  end do
+end subroutine jacobiEigen
 end module SparseKit
