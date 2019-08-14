@@ -27,7 +27,8 @@ module SparseKit
   use quickSortMod
   implicit none
   private
-  public :: Sparse, operator(*), operator(+), transpose, norm, gmres, inverse
+  public :: Sparse, operator(*), operator(+), transpose, norm&
+            , gmres, inverse
   type Triplet
      real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
@@ -646,40 +647,33 @@ contains
     implicit none
     Type(Sparse), intent(in) :: A
     Real(rkind), intent(in)  :: rhs(A%n)
+    Real(rkind) :: x(A%n)
     Integer, parameter :: itr_max = 1000
     Real(rkind), parameter :: tol_abs = 1d-15
     Real(rkind), parameter :: delta = 1.0D-03
     Real(rkind), parameter :: tol_rel = 1d-15
-    Real(rkind) :: x(A%n)
     Real(rkind) :: av, c(A%n), g(A%n), h(A%n,A%n-1)
     Real(rkind) :: htmp, tl, l(A%AI(A%n+1)+1), mu
     Real(rkind) :: g1, g2, r(A%n), rho, rho_tol
     Real(rkind) :: s(A%n), v(A%n,A%n), y(A%n), w(A%n)
-    Integer :: i, j, k, n, nnz, itr, itr_used, mr
+    Integer :: i, j, k, itr, itr_used
     Integer :: iw(A%n), jj, jrow, jw, k_copy, ua(A%n)
-    
-    mr = A%n-1
-    n = A%n
-    nnz = A%nnz
     itr_used = 0
-    ua(1:n) = -1
-    do i = 1, n
+    ua(1:A%n) = -1
+    !  Finds diagonal entries
+    do i = 1, A%n
        do k = A%AI(i), A%AI(i+1) - 1
           if ( A%AJ(k) == i ) then
              ua(i) = k
           end if
        end do
     end do   
-    !! da l
-    !
+    !  Obtains the unit lower triangular
     !  Copy A.
-    !
     l(1:A%nnz) = A%A(1:A%nnz)
-    do i = 1, n
-       !
-       !  IW points to the nonzero entries in row I.
-       !
-       iw(1:n) = -1       
+    do i = 1, A%n
+    !  IW points to the nonzero entries in row I.
+       iw(1:A%n) = -1       
        do k = A%AI(i), A%AI(i+1) - 1
           iw(A%AJ(k)) = k
        end do      
@@ -698,91 +692,75 @@ contains
           end do
        end do
        ua(i) = j
-       l(j) = 1.0D+00 / l(j)
+       l(j) = 1. / l(j)
     end do
-    l(ua(1:n)) = 1.0D+00 / l(ua(1:n))    
+    l(ua(1:A%n)) = 1. / l(ua(1:A%n))    
     do itr = 1, itr_max
        r = A*x
-       r(1:n) = rhs(1:n) - r(1:n)
-!!!!! (l*u*r=r)
-    !
-    !  Copy R in.
-    !
-    w(1:n) = r(1:n)
-    !
+       r(1:A%n) = rhs(1:A%n) - r(1:A%n)
+    !  Solve l*u*r=r
+    !  Copy r in.
+    w(1:A%n) = r(1:A%n)
     !  Solve L * w = w where L is unit lower triangular.
-    !
-    do i = 2, n
+    do i = 2, A%n
        do j = A%AI(i), ua(i) - 1
           w(i) = w(i) - l(j) * w(A%AJ(j))
        end do
     end do
-    !
     !  Solve U * w = w, where U is upper triangular.
-    !
-    do i = n, 1, -1
+    do i = A%n, 1, -1
        do j = ua(i) + 1, A%AI(i+1) - 1
           w(i) = w(i) - l(j) * w(A%AJ(j))
        end do
        w(i) = w(i) / l(ua(i))
     end do
-    !
     !  Copy Z out.
-    !
-    r(1:n) = w(1:n)
+    r(1:A%n) = w(1:A%n)
        rho = sqrt ( dot_product ( r, r ) )
        if ( itr == 1 ) then
           rho_tol = rho * tol_rel
        end if
-       v(1:n,1) = r(1:n) / rho
+       v(1:A%n,1) = r(1:A%n) / rho
        g(1) = rho
-       g(2:mr+1) = 0.0D+00
-       h(1:mr+1,1:mr) = 0.0D+00
-       do k = 1, mr
+       g(2:A%n) = 0.
+       h(1:A%n,1:A%n-1) = 0.
+       do k = 1, A%n-1
           k_copy = k
-          v(1:n,k+1) = A* v(1:n,k)        
-!!!!! (l*u*r=r)
-    !
-    !  Copy R in.
-    !
-    w(1:n) = v(1:n,k+1)
-    !
+          v(1:A%n,k+1) = A* v(1:A%n,k)        
+    !  Solve l*u*r=r
+    !  Copy r in.
+    w(1:A%n) = v(1:A%n,k+1)
     !  Solve L * w = w where L is unit lower triangular.
-    !
-    do i = 2, n
+    do i = 2, A%n
        do j = A%AI(i), ua(i) - 1
           w(i) = w(i) - l(j) * w(A%AJ(j))
        end do
     end do
-    !
     !  Solve U * w = w, where U is upper triangular.
-    !
-    do i = n, 1, -1
+    do i = A%n, 1, -1
        do j = ua(i) + 1, A%AI(i+1) - 1
           w(i) = w(i) - l(j) * w(A%AJ(j))
        end do
        w(i) = w(i) / l(ua(i))
     end do
-    !
     !  Copy Z out.
-    !
-    v(1:n,k+1) = w(1:n)
-          av = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+    v(1:A%n,k+1) = w(1:A%n)
+          av = sqrt ( dot_product ( v(1:A%n,k+1), v(1:A%n,k+1) ) )
           do j = 1, k
-             h(j,k) = dot_product ( v(1:n,k+1), v(1:n,j) )
-             v(1:n,k+1) = v(1:n,k+1) - v(1:n,j) * h(j,k)
+             h(j,k) = dot_product ( v(1:A%n,k+1), v(1:A%n,j) )
+             v(1:A%n,k+1) = v(1:A%n,k+1) - v(1:A%n,j) * h(j,k)
           end do
-          h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+          h(k+1,k) = sqrt ( dot_product ( v(1:A%n,k+1), v(1:A%n,k+1) ) )
           if ( ( av + delta * h(k+1,k)) == av ) then
              do j = 1, k
-                htmp = dot_product ( v(1:n,k+1), v(1:n,j) )
+                htmp = dot_product ( v(1:A%n,k+1), v(1:A%n,j) )
                 h(j,k) = h(j,k) + htmp
-                v(1:n,k+1) = v(1:n,k+1) - htmp * v(1:n,j)
+                v(1:A%n,k+1) = v(1:A%n,k+1) - htmp * v(1:A%n,j)
              end do
-             h(k+1,k) = sqrt ( dot_product ( v(1:n,k+1), v(1:n,k+1) ) )
+             h(k+1,k) = sqrt ( dot_product ( v(1:A%n,k+1), v(1:A%n,k+1) ) )
           end if
-          if ( h(k+1,k) /= 0.0D+00 ) then
-             v(1:n,k+1) = v(1:n,k+1) / h(k+1,k)
+          if ( h(k+1,k) /= 0. ) then
+             v(1:A%n,k+1) = v(1:A%n,k+1) / h(k+1,k)
           end if
           if ( 1 < k ) then
              y(1:k+1) = h(1:k+1,k)
@@ -798,7 +776,7 @@ contains
           c(k) = h(k,k) / mu
           s(k) = -h(k+1,k) / mu
           h(k,k) = c(k) * h(k,k) - s(k) * h(k+1,k)
-          h(k+1,k) = 0.0D+00
+          h(k+1,k) = 0.
           g1 = c(k) * g(k) - s(k) * g(k+1)
           g2 = s(k) * g(k) + c(k) * g(k+1)          
           g(k)   = g1
@@ -810,12 +788,11 @@ contains
           end if
        end do
        k = k_copy - 1
-
        y(k+1) = g(k+1) / h(k+1,k+1)
        do i = k, 1, -1
           y(i) = ( g(i) - dot_product ( h(i,i+1:k+1), y(i+1:k+1) ) ) / h(i,i)
        end do
-       do i = 1, n
+       do i = 1, A%n
           x(i) = x(i) + dot_product ( v(i,1:k+1), y(1:k+1) )
        end do
        if ( rho <= rho_tol .and. rho <= tol_abs ) then
@@ -853,5 +830,6 @@ contains
     end do
     B%nnz = nnz
     call B%makeCRS
+    return
   end function Inverse
 end module SparseKit
