@@ -6,6 +6,7 @@
 ! Version       : 0.1
 ! Date          : 07-08-2019
 ! Programmer(s) : F. Airaudo(fairaudo574@alumnos.iua.edu.ar)
+!                 M. Zuñiga(mzuniga433@alumnos.iua.edu.ar)
 !***************************************************
 ! Description (brief):
 !                     Sparseasdsajkdfopaskfa
@@ -26,7 +27,7 @@ module SparseKit
   use quickSortMod
   implicit none
   private
-  public :: Sparse, operator(*), operator(+), transpose, norm
+  public :: Sparse, operator(*), operator(+), transpose, norm, gmres, inverse
   type Triplet
      real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
@@ -78,6 +79,9 @@ module SparseKit
   interface gmres
      module procedure gmres 
   end interface gmres
+  interface inverse
+     module procedure inverse
+  end interface inverse
   
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
@@ -627,61 +631,41 @@ contains
     end do
     norm = sqrt(norm)
   end function norm
-
-!!$  !***************************************************
-!!$  ! RutinaNombre: gmres
-!!$  !     Descripcion asd asd as d 
-!!$  !  
-!!$  ! Parameters:
-!!$  !     Input, ...
-!!$  !     Output, ...
-!!$  !***************************************************
-  subroutine gmres (this, x, rhs)
+  !***************************************************
+  ! gmres: 
+  !   (generalized minimal residual method)
+  !   Approximates the solution of a nonsymmetric system 
+  !   of linear equations by the vector in a Krylov 
+  !   subspace with minimal residual.
+  !  
+  ! Parameters:
+  !     Input, A(Sparse), rhs
+  !     Output, x
+  !***************************************************
+  function gmres(A, rhs) result(x)
     implicit none
-    class(Sparse), intent(inout) :: this
-    integer :: mr
-    real(rkind) :: av
-    real(rkind) :: c(mr+1)
-    real(rkind) :: g(mr+1)
-    real(rkind) :: h(mr+1,mr)
-    real(rkind) :: htmp
-    integer :: i, j, k, n, nnz
-    integer :: itr
-    integer :: itr_used
-    integer :: iw(this%n)
-    integer :: jj
-    integer :: jrow
-    integer :: jw
-    integer :: k_copy
-    real(rkind) :: tl 
-    real(rkind) :: l(ia(this%n+1)+1)
-    real(rkind) :: mu
-    real(rkind) :: g1    
-    real(rkind) :: g2
-    real(rkind) :: r(this%n)
-    real(rkind) :: rho
-    real(rkind) :: rho_tol
-    real(rkind) :: rhs(this%n)
-    real(rkind) :: s(mr+1)
-    real(rkind) :: tol_rel
-    integer :: ua(this%n)
-    real(rkind) :: v(this%n,mr+1)
-    real(rkind) :: x(this%n)
-    real(rkind) :: y(mr+1)
-    real(rkind) :: w(this%n)
+    Type(Sparse), intent(in) :: A
+    Real(rkind), intent(in)  :: rhs(A%n)
     Integer, parameter :: itr_max = 1000
     Real(rkind), parameter :: tol_abs = 1d-15
     Real(rkind), parameter :: delta = 1.0D-03
     Real(rkind), parameter :: tol_rel = 1d-15
-
-    n = this%n
-    nnz = this%nnz
-    mr = n-1
+    Real(rkind) :: x(A%n)
+    Real(rkind) :: av, c(A%n), g(A%n), h(A%n,A%n-1)
+    Real(rkind) :: htmp, tl, l(A%AI(A%n+1)+1), mu
+    Real(rkind) :: g1, g2, r(A%n), rho, rho_tol
+    Real(rkind) :: s(A%n), v(A%n,A%n), y(A%n), w(A%n)
+    Integer :: i, j, k, n, nnz, itr, itr_used, mr
+    Integer :: iw(A%n), jj, jrow, jw, k_copy, ua(A%n)
+    
+    mr = A%n-1
+    n = A%n
+    nnz = A%nnz
     itr_used = 0
     ua(1:n) = -1
     do i = 1, n
-       do k = ia(i), ia(i+1) - 1
-          if ( ja(k) == i ) then
+       do k = A%AI(i), A%AI(i+1) - 1
+          if ( A%AJ(k) == i ) then
              ua(i) = k
           end if
        end do
@@ -690,24 +674,24 @@ contains
     !
     !  Copy A.
     !
-    l(1:nz_num) = a(1:nz_num)
+    l(1:A%nnz) = A%A(1:A%nnz)
     do i = 1, n
        !
        !  IW points to the nonzero entries in row I.
        !
        iw(1:n) = -1       
-       do k = ia(i), ia(i+1) - 1
-          iw(ja(k)) = k
+       do k = A%AI(i), A%AI(i+1) - 1
+          iw(A%AJ(k)) = k
        end do      
-       do j = ia(i), ia(i+1) - 1
-          jrow = ja(j)
+       do j = A%AI(i), A%AI(i+1) - 1
+          jrow = A%AJ(j)
           if ( i <= jrow ) then
              exit
           end if
           tl = l(j) * l(ua(jrow))
           l(j) = tl
-          do jj = ua(jrow) + 1, ia(jrow+1) - 1
-             jw = iw(ja(jj))
+          do jj = ua(jrow) + 1, A%AI(jrow+1) - 1
+             jw = iw(A%AJ(jj))
              if ( jw /= -1 ) then
                 l(jw) = l(jw) - tl * l(jj)
              end if
@@ -718,7 +702,7 @@ contains
     end do
     l(ua(1:n)) = 1.0D+00 / l(ua(1:n))    
     do itr = 1, itr_max
-       r = this*x
+       r = A*x
        r(1:n) = rhs(1:n) - r(1:n)
 !!!!! (l*u*r=r)
     !
@@ -729,16 +713,16 @@ contains
     !  Solve L * w = w where L is unit lower triangular.
     !
     do i = 2, n
-       do j = ia(i), ua(i) - 1
-          w(i) = w(i) - l(j) * w(ja(j))
+       do j = A%AI(i), ua(i) - 1
+          w(i) = w(i) - l(j) * w(A%AJ(j))
        end do
     end do
     !
     !  Solve U * w = w, where U is upper triangular.
     !
     do i = n, 1, -1
-       do j = ua(i) + 1, ia(i+1) - 1
-          w(i) = w(i) - l(j) * w(ja(j))
+       do j = ua(i) + 1, A%AI(i+1) - 1
+          w(i) = w(i) - l(j) * w(A%AJ(j))
        end do
        w(i) = w(i) / l(ua(i))
     end do
@@ -756,7 +740,7 @@ contains
        h(1:mr+1,1:mr) = 0.0D+00
        do k = 1, mr
           k_copy = k
-          v(1:n,k+1) = this* v(1:n,k)        
+          v(1:n,k+1) = A* v(1:n,k)        
 !!!!! (l*u*r=r)
     !
     !  Copy R in.
@@ -766,16 +750,16 @@ contains
     !  Solve L * w = w where L is unit lower triangular.
     !
     do i = 2, n
-       do j = ia(i), ua(i) - 1
-          w(i) = w(i) - l(j) * w(ja(j))
+       do j = A%AI(i), ua(i) - 1
+          w(i) = w(i) - l(j) * w(A%AJ(j))
        end do
     end do
     !
     !  Solve U * w = w, where U is upper triangular.
     !
     do i = n, 1, -1
-       do j = ua(i) + 1, ia(i+1) - 1
-          w(i) = w(i) - l(j) * w(ja(j))
+       do j = ua(i) + 1, A%AI(i+1) - 1
+          w(i) = w(i) - l(j) * w(A%AJ(j))
        end do
        w(i) = w(i) / l(ua(i))
     end do
@@ -839,48 +823,35 @@ contains
        end if
     end do
     return
-  end subroutine gmres
-!!$  
-!!$  !***************************************************
-!!$  ! RutinaNombre:
-!!$  !     Descripcion asd asd as d 
-!!$  !  
-!!$  ! Parameters:
-!!$  !     Input, ...
-!!$  !     Output, ...
-!!$  !***************************************************
-!!$  subroutine getInverse(this,n,A,inverse)
-!!$    Class(Poisson1DType), Intent(InOut) :: this
-!!$    type(sparseType) :: A
-!!$    type(sparseType) :: inverse
-!!$    real(rkind) :: y(n),x(n)
-!!$    Integer :: n
-!!$    Integer, parameter :: ITR_MAX = 1000
-!!$    Real(rkind), parameter :: TOL_ABS = 1d-15
-!!$    Call inverse%init(nnz = 16*this%domain%nElem, rows = this%domain%nNodes)
-!!$    do j = 1,this%domain%nNodes
-!!$       y = 0.
-!!$       y(j) = 1.
-!!$       
-!!$       Call pmgmres_ilu_cr(                &
-!!$              n = n                        &
-!!$            , nz_num = size(A%A)           &
-!!$            , ia = A%AI                    &
-!!$            , ja = A%AJ                    &
-!!$            , a = A%A                      &
-!!$            , x = x                        &
-!!$            , rhs = y                      &
-!!$            , itr_max = ITR_MAX            &
-!!$            , mr = n-1                     &
-!!$            , tol_abs = TOL_ABS            &
-!!$            , tol_rel = 1d-15              &
-!!$            , verbose = .false.           )
-!!$       do i = 1, n
-!!$          if(abs(x(i)).gt.1d-5)then
-!!$             Call inverse%append(value = x(i), row = i, col = j)
-!!$          end if
-!!$       end do
-!!$    end do
-!!$    Call inverse%getSparse
-!!$  end subroutine getInverse
+  end function gmres  
+  !***************************************************
+  ! Inverse:
+  !    Obtains the inverse of sparse matrix A
+  !  
+  ! Parameters:
+  !     Input, A(Sparse)
+  !     Output, B(Sparse)
+  !***************************************************
+  function Inverse(A) result(B)
+    implicit none
+    type(Sparse), intent(in) :: A
+    type(Sparse) :: B
+    real(rkind) :: y(A%n), x(A%n)
+    integer :: i, j, nnz
+    nnz = 0
+    B = sparse(nnz = A%n**2, rows = A%n)
+    do j = 1,A%n
+       y = 0.
+       y(j) = 1.
+       x = gmres(A,y)
+       do i = 1, A%n
+          if(abs(x(i)).gt.1d-5)then
+             nnz = nnz + 1 
+             call B%append(x(i), i, j)
+          end if
+       end do
+    end do
+    B%nnz = nnz
+    call B%makeCRS
+  end function Inverse
 end module SparseKit
