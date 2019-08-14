@@ -1,4 +1,2 @@
 # SparseKit
-- rutinas del modulo: Determinant, eigen
-- hacer Log
-- ??
+- rutinas del modulo: Determinant
