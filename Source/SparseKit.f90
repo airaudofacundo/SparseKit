@@ -28,6 +28,7 @@
 !                   Subroutine append
 !                   Subroutine makeCRS
 !                   Function get
+!                   Function getNonZeros
 !                   Subroutine printValue
 !                   Subroutine printNonZeros
 !                   Subroutine printAll
