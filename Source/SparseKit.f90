@@ -75,6 +75,7 @@ module SparseKit
      procedure, public :: makeCRS
      
      procedure, public :: get
+     procedure, public :: getNonZeros
      
      procedure, public :: printValue
      procedure, public :: printNonZeros
@@ -318,6 +319,19 @@ contains
     end do
     get = 0.d0
   end function get
+  !***************************************************
+  ! getNonZeros:
+  !     given ammount of non zeros
+  !  
+  ! Parameters:
+  !     Input, -
+  !     Output, getNonZeros()(integer)
+  !***************************************************
+  integer function getNonZeros(this)
+    implicit none
+    class(Sparse), intent(inout) :: this
+    getNonZeros = this%nnz
+  end function getNonZeros
   !***************************************************
   ! printValue:
   !     prints a single value either on console or a

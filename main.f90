@@ -75,39 +75,3 @@ program Test
 !!$  print*,'--------------------------------------------------------------'
 
 end program Test
->>>>>>> 05bcb413916a04c42a9148c1b4858b24e4c86210
-
-  !Verificacion de Operaciones
-!!$  print*,'--------------------------------------------------------------'
-!!$  print*,'-----------------------OPERACIONES----------------------------'
-!!$  print*,'--------------------------------------------------------------' 
-!!$  print*,'Matriz'
-!!$  call mat%printAll
-!!$  print*,'--------------------------------------------------------------'
-!!$  print*,'Vector'
-!!$  print*, B
-!!$  print*,'--------------------------------------------------------------'
-!!$  x = gmres(mat, B)
-!!$  print*,'Solucion de Matriz*x = Vector'
-!!$  print*, x
-!!$  print*,'--------------------------------------------------------------'
-!!$  print*,'Verificacion: Matriz*Solucion = Vector'
-!!$  print*, mat*x
-!!$  print*,'--------------------------------------------------------------'
-!!$  inversa = inverse(mat) 
-!!$  print*,'Inversa de Matriz'
-!!$  call inversa%printAll
-!!$  print*,'--------------------------------------------------------------'
-!!$  prod = inversa*mat 
-!!$  print*,'Producto de Inversa por Matriz'
-!!$  call prod%printAll
-!!$  print*,'--------------------------------------------------------------'
-!!$  print*,'Transpuesta de Matriz'
-!!$  transMat = transpose(mat)
-!!$  call transMat%printAll
-!!$  print*,'--------------------------------------------------------------'
-!!$  print*,'Borrado de fila 2 columna 3'
-!!$  call mat%deleteRowAndCol(2,3)
-!!$  call mat%printAll()
-!!$  print*,'--------------------------------------------------------------'
-end program Test
