@@ -17,7 +17,7 @@ Contains
 
   Recursive Subroutine quickSort1vect(vect1, low, high)
     Implicit none
-    Real(dp), Dimension(:), Intent(InOut) :: vect1
+    Real(rkind), Dimension(:), Intent(InOut) :: vect1
     Integer, Intent(In) :: low, high
     Integer i, iPivot, j
     iPivot = high    
@@ -40,7 +40,7 @@ Contains
   Recursive Subroutine quickSort2vect(vect1, vect2, low, high)
     Implicit none
     Integer, Dimension(:), Intent(InOut) :: vect1
-    Real(dp), Dimension(:), Intent(InOut) :: vect2
+    Real(rkind), Dimension(:), Intent(InOut) :: vect2
     Integer, Intent(In) :: low, high
     Integer i, iPivot, j
     iPivot = high    
@@ -65,7 +65,7 @@ Contains
   Recursive Subroutine quickSort3vect(vect1, vect2, vect3, low, high)
     Implicit none
     Integer, Dimension(:), Intent(InOut) :: vect1, vect2
-    Real(dp), Dimension(:), Intent(InOut) :: vect3
+    Real(rkind), Dimension(:), Intent(InOut) :: vect3
     Integer, Intent(In) :: low, high
     Integer i, iPivot, j
     iPivot = high    
@@ -91,7 +91,7 @@ Contains
 
   Recursive Subroutine quickSort4vect(vect1, vect2, vect3, vect4, low, high)
     Implicit none
-    Real(dp), Dimension(:), Intent(InOut) :: vect1, vect2, vect3, vect4
+    Real(rkind), Dimension(:), Intent(InOut) :: vect1, vect2, vect3, vect4
     Integer, Intent(In) :: low, high
     Integer i, iPivot, j
     iPivot = high    
@@ -127,8 +127,8 @@ Contains
   End Subroutine swapInt
   Subroutine swapReal(a,b)
     Implicit none
-    Real(dp), Intent(InOut) :: a, b
-    Real(dp) ::  aux
+    Real(rkind), Intent(InOut) :: a, b
+    Real(rkind) ::  aux
     aux = b
     b = a
     a = aux

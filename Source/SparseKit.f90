@@ -1,24 +1,48 @@
-!***************************************************
-!       Instituto Universitario Aeronautico
-!       Dpto. Mecanica Aeronautica
-!***************************************************
+!*************************************************************
+!           Instituto Universitario Aeronautico
+!                Dpto. Mecanica Aeronautica
+!*************************************************************
 ! Filename      : SparseKit.f90
-! Version       : 0.1
-! Date          : 07-08-2019
+! Version       : 0.9
+! Date          : 14-08-2019
 ! Programmer(s) : F. Airaudo(fairaudo574@alumnos.iua.edu.ar)
 !                 M. Zuñiga(mzuniga433@alumnos.iua.edu.ar)
-!***************************************************
+!*************************************************************
 ! Description (brief):
-!                     Sparseasdsajkdfopaskfa
-!*************************************************** 
+!                     Module for all algebraic and functional
+!                     Operations with Sparse Matrices. That is,
+!                     For matrices where the number of nonzeros
+!                     highly exceeds the number of zeros, this
+!                     tools allow you to declare a derived
+!                     data type to work with them. 
+!************************************************************* 
 ! Dependecies:
-!             Use tools - Filename: Utilities.f90
+!             Use tools        - Filename: Utilities.f90
 !             Use QuickSortMod - Filename: quicksort.f90
-!***************************************************
+!*************************************************************
 ! Public procedures:
-!                   Type(Sparse)
-!                   
-!***************************************************
+!              Type(Sparse)
+!              Derived type Procedures 
+!                   Subroutine init
+!                   Subroutine update
+!                   Subroutine append
+!                   Subroutine makeCRS
+!                   Function get
+!                   Subroutine printValue
+!                   Subroutine printNonZeros
+!                   Subroutine printAll
+!                   Subroutine deleteRowAndCol
+!                   Subroutine delete
+!              Module Procedures:
+!                   Function transpose
+!                   Function inverse
+!                   Function norm
+!                   Function gmres
+!                   Subroutine sparse_sparse_prod ->  Operator:
+!                   Subroutine sparse_vect_prod   ->     (*)
+!                   Subroutine sparse_sparse_sum  ->  Operator:
+!                                                        (+)
+!*************************************************************
 module SparseKit
   !***********************************************
   !*                 EXTERNS                     *
@@ -27,7 +51,7 @@ module SparseKit
   use quickSortMod
   implicit none
   private
-  public :: Sparse, operator(*), operator(+), transpose, norm&
+  public :: Sparse, operator(*), operator(+), transpose, norm &
             , gmres, inverse
   type Triplet
      real(rkind), dimension(:), allocatable :: A
@@ -391,14 +415,12 @@ contains
     integer :: i, j, k
     integer :: rowSize
     integer, dimension(:), allocatable :: AI
-
-    allocate(AI(size(this%AI)))
-    do i = 1, size(AI)
-       AI(i) = this%AI(i)
-    end do
-    deallocate(this%AI)
-
     if(isCRSDone) then
+       allocate(AI(size(this%AI)))
+       do i = 1, size(AI)
+          AI(i) = this%AI(i)
+       end do
+       deallocate(this%AI)
        do i = size(AI)-1, 1, -1
           if(i == row) then
              rowSize = AI(i+1)-AI(i)
@@ -439,7 +461,28 @@ contains
           this%AI(i) = AI(i)
        end do
     else
-
+       i = 1
+       do while(i < this%counter)
+          if(this%triplet%row(i) == row .or. this%triplet%col(i) == col) then
+             this%triplet%row(i) = this%triplet%row(this%counter)
+             this%triplet%col(i) = this%triplet%col(this%counter)
+             this%triplet%A(i) = this%triplet%A(this%counter)
+             this%counter = this%counter - 1
+          else
+             i = i + 1
+          end if
+       end do
+       if(this%triplet%row(i) == row .or. this%triplet%col(i) == col) then
+          this%counter = this%counter - 1
+       end if
+       do i = 1, this%counter
+          if(this%triplet%row(i) > row) then
+             this%triplet%row(i) = this%triplet%row(i) - 1
+          end if
+          if(this%triplet%col(i) > col) then
+             this%triplet%col(i) = this%triplet%col(i) - 1
+          end if
+       end do
     end if
     this%n = this%n - 1
   end subroutine deleteRowAndCol
@@ -809,7 +852,7 @@ contains
   !     Input, A(Sparse)
   !     Output, B(Sparse)
   !***************************************************
-  function Inverse(A) result(B)
+  function inverse(A) result(B)
     implicit none
     type(Sparse), intent(in) :: A
     type(Sparse) :: B
@@ -823,13 +866,11 @@ contains
        x = gmres(A,y)
        do i = 1, A%n
           if(abs(x(i)).gt.1d-5)then
-             nnz = nnz + 1 
              call B%append(x(i), i, j)
           end if
        end do
     end do
-    B%nnz = nnz
     call B%makeCRS
     return
-  end function Inverse
+  end function inverse
 end module SparseKit
