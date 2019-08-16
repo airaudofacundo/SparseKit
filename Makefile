@@ -12,7 +12,7 @@ OBJECTS := $(BINDIR)/utilities.o $(BINDIR)/quicksort.o $(BINDIR)/SparseKit.o $(B
 main: $(OBJECTS)
 	$(COMPILER) $(FFLAGS) $(OBJECTS) -o main
 
-mainDebug: $(OBJECTS)
+debug: $(OBJECTS)
 	$(COMPILER) $(FFLAGSDebug) $(OBJECTS) -o main
 
 $(BINDIR)/main.o : main.f90
