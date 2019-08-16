@@ -7,13 +7,16 @@ OBJECTDIR	:=  Objects
 FFLAGS		:=  -g -O3 -J$(OBJECTDIR)
 FFLAGSDebug 	:=  -g -Wall -fcheck=all -J$(OBJECTDIR)
 
-OBJECTS := $(BINDIR)/utilities.o $(BINDIR)/quicksort.o $(BINDIR)/SparseKit.o
+OBJECTS := $(BINDIR)/utilities.o $(BINDIR)/quicksort.o $(BINDIR)/SparseKit.o $(BINDIR)/main.o
 
 main: $(OBJECTS)
-	$(COMPILER) $(FFLAGS) $(OBJECTS) main.f90 -o main
+	$(COMPILER) $(FFLAGS) $(OBJECTS) -o main
 
 mainDebug: $(OBJECTS)
-	$(COMPILER) $(FFLAGSDebug) $(OBJECTS) main.f90 -o main
+	$(COMPILER) $(FFLAGSDebug) $(OBJECTS) -o main
+
+$(BINDIR)/main.o : main.f90
+	$(COMPILER) $(FFLAGS) -c $^ -o $@ 
 
 $(BINDIR)/%.o : $(VPATH)/%.f90
 	$(COMPILER) $(FFLAGS) -c $^ -o $@ 
