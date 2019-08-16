@@ -701,8 +701,8 @@ contains
   !   subspace with minimal residual.
   !  
   ! Parameters:
-  !     Input, A(Sparse), rhs
-  !     Output, x
+  !     Input, A(Sparse), rhs(Realrkind)
+  !     Output, x(Realrkind)
   !***************************************************
   function gmres(A, rhs) result(x)
     implicit none
@@ -900,8 +900,8 @@ contains
   !
   ! Parameters:
   !     Input, A(Sparse)
-  !     Output, Eigenvec, the matrix of eigenvectors
-  !     Output, Eigenval, the eigenvalues.
+  !     Output, Eigenvec(Realrkind), the matrix of eigenvectors
+  !     Output, Eigenval(Realrkind), the eigenvalues.
   !***************************************************
   subroutine jacobiEigen(A_input, Eigenval, Eigenvec) 
     implicit none
