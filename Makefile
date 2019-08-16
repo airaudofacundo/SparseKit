@@ -4,8 +4,8 @@ COMPILER	:=  gfortran
 VPATH		:=  Source
 BINDIR		:=  Bin
 OBJECTDIR	:=  Objects
-FFLAGS		:=  -g -O3 -J$(OBJECTDIR)
-FFLAGSDebug 	:=  -g -Wall -fcheck=all -J$(OBJECTDIR)
+FFLAGS		:=  -g -O3 -static -J$(OBJECTDIR)
+FFLAGSDebug 	:=  -g -Wall -static -fcheck=all -J$(OBJECTDIR)
 
 OBJECTS := $(BINDIR)/utilities.o $(BINDIR)/quicksort.o $(BINDIR)/SparseKit.o $(BINDIR)/main.o
 
