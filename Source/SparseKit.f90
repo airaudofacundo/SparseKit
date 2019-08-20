@@ -33,7 +33,7 @@
 !                   Subroutine printNonZeros
 !                   Subroutine printAll
 !                   Subroutine deleteRowAndCol
-!                   Subroutine delete
+!                   Subroutine free
 !              Module Procedures:
 !                   Function transpose
 !                   Function inverse
@@ -84,6 +84,8 @@ module SparseKit
      procedure, public :: printAll
 
      procedure, public :: deleteRowAndCol
+
+     procedure, public :: free
      
      procedure, private :: handleDuplicates
   end type Sparse
@@ -519,20 +521,20 @@ contains
     this%n = this%n - 1
   end subroutine deleteRowAndCol
   !***************************************************
-  ! delete:
+  ! free:
   !     Clears memory space taken by the sparse matrix
   !  
   ! Parameters:
   !     Input, -
   !     Output, -
   !***************************************************
-  subroutine delete(this)
+  subroutine free(this)
     implicit none
     class(Sparse), intent(inout) :: this
     if(allocated(this%A)) deallocate(this%A)
     if(allocated(this%AJ)) deallocate(this%AJ)
     if(allocated(this%AI)) deallocate(this%AI)
-  end subroutine delete
+  end subroutine free
 
 
 
