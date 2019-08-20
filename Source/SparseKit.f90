@@ -548,7 +548,7 @@ contains
        print'(A)', '** diferent sizes in input sparse matrices! **'
        return
     end if
-    c = sparse(nnz = a%n*3, rows = a%n)
+    c = sparse(nnz = max( a%nnz, b%nnz), rows = a%n)
     counter = 1
     do i = 1, a%n
        aRowSize = a%AI(i+1) - a%AI(i)
