@@ -76,7 +76,8 @@ module SparseKit
      procedure, public :: makeCRS
      
      procedure, public :: get
-     procedure, public :: getNonZeros
+     procedure, public :: getnnz
+     procedure, public :: getn
      
      procedure, public :: printValue
      procedure, public :: printNonZeros
@@ -321,18 +322,31 @@ contains
     get = 0.d0
   end function get
   !***************************************************
-  ! getNonZeros:
+  ! getnnz:
   !     given ammount of non zeros
   !  
   ! Parameters:
   !     Input, -
-  !     Output, getNonZeros()(integer)
+  !     Output, getnnz()(integer)
   !***************************************************
-  integer function getNonZeros(this)
+  integer function getnnz(this)
     implicit none
     class(Sparse), intent(inout) :: this
-    getNonZeros = this%nnz
-  end function getNonZeros
+    getnnz = this%nnz
+  end function getnnz
+  !***************************************************
+  ! getn:
+  !     get order of matrix
+  !  
+  ! Parameters:
+  !     Input, -
+  !     Output, getn()(integer)
+  !***************************************************
+  integer function getn(this)
+    implicit none
+    class(Sparse), intent(inout) :: this
+    getn = this%n
+  end function getn
   !***************************************************
   ! printValue:
   !     prints a single value either on console or a
