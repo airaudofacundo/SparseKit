@@ -52,8 +52,8 @@ module SparseKit
   use quickSortMod
   implicit none
   private
-  public :: Sparse, operator(*), operator(+), transpose, norm&
-            , gmres, inverse, jacobiEigen
+  public :: Sparse, operator(*), operator(+), operator(-), transpose&
+       , norm, gmres, inverse, jacobiEigen, trace, inverseGMRESD, id
   type Triplet
      real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
@@ -93,10 +93,14 @@ module SparseKit
   interface operator(*)
      module procedure sparse_sparse_prod
      module procedure sparse_vect_prod
+     module procedure coef_sparse_prod
   end interface operator(*)
   interface operator(+)
      module procedure sparse_sparse_add
   end interface operator(+)
+  interface operator(-)
+     module procedure sparse_sparse_sub
+  end interface operator(-)
   interface sparse
      procedure constructor
   end interface sparse
@@ -106,6 +110,9 @@ module SparseKit
   interface norm
      module procedure norm
   end interface norm
+  interface trace
+     module procedure trace
+  end interface trace
   interface gmres
      module procedure gmres 
   end interface gmres
@@ -617,6 +624,29 @@ contains
     end do
   end function sparse_vect_prod
   !***************************************************
+  ! coef_sparse_prod(*):
+  !      Performs the product between a sparse matrix
+  !      and a coeficient real vector.
+  !      Operator: (*).
+  !  
+  ! Parameters:
+  !     Input, mat(Sparse), coef(realrkind)
+  !     Output, res(realrkind)
+  !***************************************************
+  function coef_sparse_prod(coef ,mat) result(res)
+    implicit none
+    type(Sparse), intent(in) :: mat
+    type(Sparse) :: res
+    real(rkind), intent(in) :: coef
+    real(rkind) :: c
+    integer :: i
+    c = coef
+    res = mat
+    do i = 1, res%nnz
+       res%A(i) = res%A(i)*c
+    end do
+  end function coef_sparse_prod
+  !***************************************************
   ! sparse_sparse_add:
   !     performs the addition of sparse a plus
   !     sparse b. Operator: (+).
@@ -650,6 +680,40 @@ contains
     end do
     call c%makeCRS
   end function sparse_sparse_add
+    !***************************************************
+  ! sparse_sparse_sub:
+  !     performs the subtraction of sparse a and
+  !     sparse b. Operator: (-).
+  !  
+  ! Parameters:
+  !     Input, a(Sparse), b(Sparse)
+  !     Output, c(Sparse)
+  !***************************************************
+  function sparse_sparse_sub(a, b) result(c)
+    implicit none
+    type(Sparse), intent(in) :: a
+    type(Sparse), intent(in) :: b
+    type(Sparse) :: c
+    integer :: counter, rowSize, i, k
+    c = sparse(nnz = a%nnz+b%nnz, rows = a%n)
+    counter = 1
+    do i = 1, a%n
+       rowSize = a%AI(i+1) - a%AI(i)
+       do k = counter, counter+rowSize-1
+          call c%append(a%A(k), i, a%AJ(k))
+       end do
+       counter = counter + rowSize
+    end do
+    counter = 1
+    do i = 1, b%n
+       rowSize = b%AI(i+1) - b%AI(i)
+       do k = counter, counter+rowSize-1
+          call c%append(-1.*b%A(k), i, b%AJ(k))
+       end do
+       counter = counter + rowSize
+    end do
+    call c%makeCRS
+  end function sparse_sparse_sub
   !***************************************************
   ! transpose:
   !     Obtains the transpose of sparse matrix a
@@ -709,6 +773,48 @@ contains
     end do
     norm = sqrt(norm)
   end function norm
+  !***************************************************
+  ! trace:
+  !     Computes the sum of the elements of the
+  !     diagonal of a sparse matrix
+  !  
+  ! Parameters:
+  !     Input, a(Sparse)
+  !     Output, trace(Realrkind)
+  !***************************************************
+  real(rkind) function trace(a)
+    implicit none
+    type(Sparse), intent(in) :: a
+    integer :: i, j
+    trace = 0
+    do i = 1, a%n
+       do j = a%AI(i), a%AI(i+1)-1
+          if(a%AJ(j) == i) then
+             trace = trace + a%A(j)
+             exit
+          end if
+       end do
+    end do
+  end function trace
+  !***************************************************
+  ! id:
+  !     Computes the identity matrix of order n
+  !  
+  ! Parameters:
+  !     Input, n(integerrkind)
+  !     Output, id(Sparse)
+  !***************************************************
+  function id(n) result(a)
+    implicit none
+    type(Sparse) :: a
+    integer, intent (in) :: n
+    integer :: i
+    a = sparse(nnz = n, rows = n)
+    do i = 1, n
+       call a%append(1, i, i)
+    end do
+    call a%makeCRS
+  end function id
   !***************************************************
   ! gmres: 
   !   (generalized minimal residual method)
@@ -891,8 +997,7 @@ contains
     type(Sparse), intent(in) :: A
     type(Sparse) :: B
     real(rkind) :: y(A%n), x(A%n)
-    integer :: i, j, nnz
-    nnz = 0
+    integer :: i, j
     B = sparse(nnz = A%n**2, rows = A%n)
     do j = 1,A%n
        y = 0.
@@ -907,6 +1012,33 @@ contains
     call B%makeCRS
     return
   end function inverse
+    !***************************************************
+  ! inverseGMRESD:
+  !    Obtains the inverse of sparse matrix A
+  !    (Global Minimal Residual descent algorithm)
+  ! Parameters:
+  !     Input, A(Sparse)
+  !     Output, B(Sparse)
+  !***************************************************
+  function inverseGMRESD(A) result(M)
+    implicit none
+    type(Sparse), intent(in) :: A
+    type(Sparse) :: B
+    type(Sparse) :: C
+    type(Sparse) :: G
+    type(Sparse) :: M
+    real(rkind) :: alpha
+    alpha = 1.
+    M = transpose(A)
+    do while (abs(alpha) > 1e-15)
+       C = A * M
+       G = Id(A%n) - C
+       B = A * G
+       alpha = trace(transpose(G)*B)/(norm(B))**2
+       M = M + alpha * G
+    end do
+    return
+  end function inverseGMRESD
   !***************************************************
   ! jacobiEigen:
   !    Obtains the eigenvalues and eigenvectors of a

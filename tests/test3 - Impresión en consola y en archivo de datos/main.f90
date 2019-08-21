@@ -24,13 +24,16 @@ program test3
   
   call matrix%makeCRS
 
-  call matrix%printValue(3,2)
-  call matrix%printNonZeros()
-  call matrix%printAll()
+  print'(/,A)','Print Value'
+  call matrix%printValue   (3,2)
+  print'(/,A)','Print Non Zeros'
+  call matrix%printNonZeros
+  print'(/,A)','Print All'
+  call matrix%printAll     
 
   call matrix%printNonZeros('NonZeros.dat')
-  call matrix%printValue(3,2,'Value.dat')
-  call matrix%printAll('matrix.dat')
+  call matrix%printValue   ( 3, 2,'Value.dat')
+  call matrix%printAll     ('matrix.dat')
 
 end program test3
 

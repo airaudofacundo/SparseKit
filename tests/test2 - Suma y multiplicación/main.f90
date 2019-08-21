@@ -5,9 +5,9 @@ program test2
   type(Sparse) :: matrixB
   type(Sparse) :: addition
   type(Sparse) :: multiplication
-  real*8 :: vector(4)
+  real*8       :: vector(4)
 
-  vector = (/2.2, 6.3, 5.1, 7.5/)
+  vector  = (/2.2, 6.3, 5.1, 7.5/)
 
   matrixA = sparse( nnz = 16, rows = 4)
 
@@ -30,7 +30,7 @@ program test2
   
   call matrixA%makeCRS
 
-  print*,'Matrix A'
+  print'(/,A)','Matrix A'
   call matrixA%printAll
 
   matrixB = sparse( nnz = 12, rows = 4)
@@ -50,21 +50,21 @@ program test2
   
   call matrixB%makeCRS
 
-  print*,'Matrix B'
+  print'(/,A)','Matrix B'
   call matrixB%printAll
 
-  print*,'Vector'
-  print*, vector
+  print'(/,A)','Vector'
+  print'(*(E10.4,2X))', vector
 
   addition = matrixA + matrixB
-  print*,'A + B'
+  print'(/,A)','A + B'
   call addition%printAll
 
   multiplication = matrixA*matrixB
-  print*,'A * B'
+  print'(/,A)','A * B'
   call multiplication%printAll
   
-  print*,'A*V'
-  print*, matrixA * vector
+  print'(/,A)','A*V'
+  print'(*(E10.4,2X))', matrixA * vector
 
 end program test2

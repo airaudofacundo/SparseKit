@@ -24,8 +24,8 @@ program test1
   
   call matrix%makeCRS
 
-  print*,'A(3,2) = ', matrix%get( 3, 3)
-  print*,'nnz = ', matrix%getNonZeros()
+  print'(/,A,E12.5,/)','A(3,2) = ', matrix%get( 3, 3)
+  print'(A,1X,I0,/)','nnz    = ', matrix%getNonZeros()
 
 end program test1
 

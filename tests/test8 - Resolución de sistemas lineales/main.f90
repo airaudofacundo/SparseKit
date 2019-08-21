@@ -27,15 +27,16 @@ program test8
   
   call matrix%makeCRS
 
-  print*,'Matrix'
+  print'(/,A)','Matrix - M'
   call matrix%printAll
 
-  print*,'Vector'
-  print*, vector
-  print*,'Solution'
-  print*, gmres(matrix, vector)
+  print'(/,A)','Vector - V'
+  print'(*(E10.4,2X))', vector
+  
+  print'(/,A)','Solution - X'
+  print'(*(E10.4,2X))', gmres(matrix, vector)
 
-  print*,'Verification (M*x=V)'
-  print*, matrix*gmres(matrix, vector)
+  print'(/,A)','Verification (M*X=V)'
+  print'(*(E10.4,2X))', matrix*gmres(matrix, vector)
 
 end program test8

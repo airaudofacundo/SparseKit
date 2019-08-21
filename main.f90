@@ -1,16 +1,12 @@
-program test8
+program test
   use SparseKit
   implicit none
   type(Sparse) :: matrixA
-  type(Sparse) :: matrixB
-  type(Sparse) :: addition
-  type(Sparse) :: multiplication
-  real*8 :: vector(4)
+  type(Sparse) :: inversematrixA
+  type(Sparse) :: inverseGMRESDmatrixA
 
-  vector = (/2.2, 6.3, 5.1, 7.5/)
-
-  matrixA = sparse( nnz = 16, rows = 4)
-
+  matrixA = sparse(16,4)
+  
   call matrixA%append( value =    4, row = 1, col = 1)
   call matrixA%append( value =  -30, row = 1, col = 2)
   call matrixA%append( value =   60, row = 1, col = 3)
@@ -30,43 +26,19 @@ program test8
   
   call matrixA%makeCRS
 
+  print*,''
   print*,'Matrix A'
   call matrixA%printAll
 
-  matrixB = sparse( nnz = 12, rows = 4)
+  inversematrixA = inverse(matrixA)
 
-  call matrixB%append( value =    4, row = 1, col = 1)
-  call matrixB%append( value =    1, row = 1, col = 2)
-  call matrixB%append( value =   60, row = 1, col = 3)
-  call matrixB%append( value =   -5, row = 1, col = 4)
-  call matrixB%append( value =  300, row = 2, col = 2)
-  call matrixB%append( value = -675, row = 2, col = 3)
-  call matrixB%append( value =  420, row = 2, col = 4)
-  call matrixB%append( value =   60, row = 3, col = 1)
-  call matrixB%append( value =    1, row = 3, col = 3)
-  call matrixB%append( value =  -35, row = 4, col = 1)
-  call matrixB%append( value =  420, row = 4, col = 2)
-  call matrixB%append( value =  700, row = 4, col = 4)
-  
-  call matrixB%makeCRS
+  print*,''
+  print*,'Inverse'
+  call inversematrixA%printAll
 
-  print*,'Matrix B'
-  call matrixB%printAll
+  print*,''
+  print*,'InverseGMRESD'
+  inverseGMRESDmatrixA = inverseGMRESD(matrixA)
+  call inverseGMRESDmatrixA%printAll
 
-  print*,'Vector'
-  print*, vector
-
-  multiplication = matrixA*matrixB
-  print*,'A * B'
-  call multiplication%printAll
-
-  addition = matrixA + matrixB
-  print*,'A + B'
-  call addition%printAll
-
-  print*,'A*V'
-  print*, matrixA * vector
-
-!!$  print*,'V*A'
-!!$  print*, vector * matrixA
-end program test8
+end program test

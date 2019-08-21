@@ -27,14 +27,18 @@ program test6
   
   call matrix%makeCRS
 
+  print'(/,A)','Matrix'  
   call matrix%printAll
 
+  print'(/,A)','Transpose matrix'
   transposeMatrix = transpose(matrix)
   call transposeMatrix%printAll
 
+  print'(/,A)','Inverse matrix'
   inverseMatrix = inverse(matrix)
   call inverseMatrix%printAll
 
+  print'(/,A)','Verification'
   verification = matrix*inverseMatrix
   call verification%printAll
 

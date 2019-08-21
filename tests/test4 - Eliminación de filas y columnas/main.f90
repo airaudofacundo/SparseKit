@@ -24,10 +24,12 @@ program test4
   
   call matrix%makeCRS
 
+  print'(/,A)','Matrix'
   call matrix%printAll
 
   call matrix%deleteRowAndCol(1,3)
 
+  print'(/,A)','Delete row 1, column 3'
   call matrix%printAll
 
 end program test4

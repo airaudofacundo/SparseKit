@@ -24,6 +24,6 @@ program test5
   
   call matrix%makeCRS
 
-  print*,'Norma de Frobenius = ', norm(matrix)
+  print'(/,A,E10.4)','Norma de Frobenius = ', norm(matrix)
 
 end program test5

@@ -26,15 +26,17 @@ program test7
   
   call matrix%makeCRS
 
+  print'(/,A)','Matrix'
   call matrix%printAll
 
   call jacobiEigen(matrix, eigenvalues, eigenVectors)
 
-  print'(A)','Eigenvalues'
-  print'(4e12.4)', eigenValues
-  print'(A)','Eigenvectors'
+  print'(/,A)','Eigenvalues'
+  print'(*(E10.4,2X))', eigenValues
+  
+  print'(/,A)','Eigenvectors'
   do i = 1, 4
-     print'(4e12.4)', (eigenVectors(i,j),j = 1, 4)
+     print'(*(E10.4,2X))', (eigenVectors(i,j),j = 1, 4)
   end do
 
 end program test7
