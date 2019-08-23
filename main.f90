@@ -58,7 +58,6 @@ program timeTest
   integer, parameter :: MAX_NNZ_B = 500000
   integer, parameter :: N = 50000
   integer :: i
-  real(dp) :: start1, start2, finish1, finish2
   
   a = sparse(nnz = MAX_NNZ_A, rows = N)
   b = sparse(nnz = MAX_NNZ_B, rows = N)
@@ -80,28 +79,9 @@ program timeTest
   end do
   call b%makeCRS
 
-!!$  call a%printNonZeros('annz.dat')
-!!$  call b%printNonZeros('bnnz.dat')
-  call cpu_time(start1)
-  c = sparse_sparse_prod_viejo(a,b)
-  call cpu_time(finish1)
-  !call c%printNonZeros('nnz1.dat')
-  call c%free()
-  call cpu_time(start2)
   d = a*b
-  call cpu_time(finish2)
   !call d%printNonZeros('nnz2.dat')
   call d%free()
 
-
-  print*, 'método 1 time = ', finish1-start1
-  print*, 'método 2 time = ', finish2-start2
-
-
-
-  
-  
 end program timeTest
-
-
 
