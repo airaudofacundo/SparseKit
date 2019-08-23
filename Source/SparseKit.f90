@@ -61,7 +61,7 @@ module SparseKit
   private
   public :: Sparse, operator(*), operator(+), operator(-), transpose&
        , norm, gmres, inverse, jacobiEigen, trace, inverseGMRESD, id&
-       , lcholesky
+       , lcholesky, det
   type Triplet
      real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
@@ -121,6 +121,9 @@ module SparseKit
   interface trace
      module procedure trace
   end interface trace
+  interface det
+     module procedure det
+  end interface det
   interface lcholesky
      module procedure lcholesky
   end interface lcholesky
@@ -831,6 +834,31 @@ contains
        end do
     end do
   end function trace
+  !***************************************************
+  ! det:
+  !     Computes the determinant
+  !  
+  ! Parameters:
+  !     Input, a(Sparse)
+  !     Output, det(Realrkind)
+  !***************************************************
+  real(rkind) function det(a)
+    implicit none
+    type(Sparse), intent(in) :: a
+    type(Sparse) :: m
+    integer :: i, j
+    det = 1.
+    m = lcholesky(a)
+    do i = 1, m%n
+       do j = m%AI(i), m%AI(i+1)-1
+          if(m%AJ(j) == i) then
+             det = det * m%A(j)
+             exit
+          end if
+       end do
+    end do
+    det = det**2
+  end function det
   !***************************************************
   ! id:
   !     Computes the identity matrix of order n
