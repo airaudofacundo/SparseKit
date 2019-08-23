@@ -1,4 +1,5 @@
-module RandomMod
+program test
+  use SparseKit
   implicit none
   type(Sparse) :: matrixA
   type(Sparse) :: matrixL
