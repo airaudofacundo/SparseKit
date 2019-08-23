@@ -1,72 +1,107 @@
-program test8
+module RandomMod
+  use tools
+  implicit none
+  private
+  public :: randomReal, randomInt
+  logical :: isInit = .false.
+Contains
+  subroutine randomInit
+    use tools
+    implicit none
+    integer :: k, m
+    integer :: count
+    integer, dimension(:), allocatable :: seed
+    Call system_clock(count)
+    Call random_seed(size = m)
+    Allocate(seed(m), source=count+37*[(k,k=0,m-1)])
+    Call random_seed(put = seed)
+    isInit = .true.
+  end subroutine randomInit
+
+  real(dp) function randomReal(lower, upper)
+    use tools
+    implicit none
+    class(*), intent(in) :: lower
+    class(*), intent(in) :: upper
+    real(dp) :: l
+    real(dp) :: u
+    if(.not.isInit) call randomInit
+    l = lower
+    u = upper
+    call random_number(randomReal)
+    randomReal = (u-l)*randomReal + l
+  end function randomReal
+
+  integer function randomInt(lower, upper)
+    use tools
+    implicit none
+    integer, intent(in) :: lower
+    integer, intent(in) :: upper
+    real(dp) :: randomNumber
+    if(.not.isInit) call randomInit
+    call random_number(randomNumber)
+    randomInt = nint((upper-lower)*randomNumber + lower)
+  end function randomInt
+end module RandomMod
+  
+program timeTest
+  use tools
+  use RandomMOD
   use SparseKit
   implicit none
-  type(Sparse) :: matrixA
-  type(Sparse) :: matrixB
-  type(Sparse) :: addition
-  type(Sparse) :: multiplication
-  real*8 :: vector(4)
-
-  vector = (/2.2, 6.3, 5.1, 7.5/)
-
-  matrixA = sparse( nnz = 16, rows = 4)
-
-  call matrixA%append( value =    4, row = 1, col = 1)
-  call matrixA%append( value =  -30, row = 1, col = 2)
-  call matrixA%append( value =   60, row = 1, col = 3)
-  call matrixA%append( value =  -35, row = 1, col = 4)
-  call matrixA%append( value =  -30, row = 2, col = 1)
-  call matrixA%append( value =  300, row = 2, col = 2)
-  call matrixA%append( value = -675, row = 2, col = 3)
-  call matrixA%append( value =  420, row = 2, col = 4)
-  call matrixA%append( value =   60, row = 3, col = 1)
-  call matrixA%append( value = -675, row = 3, col = 2)
-  call matrixA%append( value = 1620, row = 3, col = 3)
-  call matrixA%append( value =-1050, row = 3, col = 4)
-  call matrixa%append( value =  -35, row = 4, col = 1)
-  call matrixA%append( value =  420, row = 4, col = 2)
-  call matrixA%append( value =-1050, row = 4, col = 3)
-  call matrixA%append( value =  700, row = 4, col = 4)
+  type(Sparse) :: a
+  type(Sparse) :: b
+  type(Sparse) :: c
+  type(Sparse) :: d
+  !choose order for a and b, and max number of nnz
+  integer, parameter :: MAX_NNZ_A = 500000
+  integer, parameter :: MAX_NNZ_B = 500000
+  integer, parameter :: N = 50000
+  integer :: i
+  real(dp) :: start1, start2, finish1, finish2
   
-  call matrixA%makeCRS
-
-  print*,'Matrix A'
-  call matrixA%printAll
-
-  matrixB = sparse( nnz = 12, rows = 4)
-
-  call matrixB%append( value =    4, row = 1, col = 1)
-  call matrixB%append( value =    1, row = 1, col = 2)
-  call matrixB%append( value =   60, row = 1, col = 3)
-  call matrixB%append( value =   -5, row = 1, col = 4)
-  call matrixB%append( value =  300, row = 2, col = 2)
-  call matrixB%append( value = -675, row = 2, col = 3)
-  call matrixB%append( value =  420, row = 2, col = 4)
-  call matrixB%append( value =   60, row = 3, col = 1)
-  call matrixB%append( value =    1, row = 3, col = 3)
-  call matrixB%append( value =  -35, row = 4, col = 1)
-  call matrixB%append( value =  420, row = 4, col = 2)
-  call matrixB%append( value =  700, row = 4, col = 4)
+  a = sparse(nnz = MAX_NNZ_A, rows = N)
+  b = sparse(nnz = MAX_NNZ_B, rows = N)
   
-  call matrixB%makeCRS
+  !random a
+  do i = 1, MAX_NNZ_A
+     call a%append(                  &
+          value = randomReal(0,100)  &
+          , row = randomInt(1, N)      &
+          , col = randomInt(1, N)      )
+  end do
+  call a%makeCRS
+  !random b
+  do i = 1, MAX_NNZ_b
+     call b%append(                  &
+          value = randomReal(0,100)  &
+          , row = randomInt(1, N)      &
+          , col = randomInt(1, N)      )
+  end do
+  call b%makeCRS
 
-  print*,'Matrix B'
-  call matrixB%printAll
+!!$  call a%printNonZeros('annz.dat')
+!!$  call b%printNonZeros('bnnz.dat')
+  call cpu_time(start1)
+  c = sparse_sparse_prod_viejo(a,b)
+  call cpu_time(finish1)
+  !call c%printNonZeros('nnz1.dat')
+  call c%free()
+  call cpu_time(start2)
+  d = a*b
+  call cpu_time(finish2)
+  !call d%printNonZeros('nnz2.dat')
+  call d%free()
 
-  print*,'Vector'
-  print*, vector
 
-  multiplication = matrixA*matrixB
-  print*,'A * B'
-  call multiplication%printAll
+  print*, 'método 1 time = ', finish1-start1
+  print*, 'método 2 time = ', finish2-start2
 
-  addition = matrixA + matrixB
-  print*,'A + B'
-  call addition%printAll
 
-  print*,'A*V'
-  print*, matrixA * vector
 
-!!$  print*,'V*A'
-!!$  print*, vector * matrixA
-end program test8
+  
+  
+end program timeTest
+
+
+
