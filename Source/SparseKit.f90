@@ -39,10 +39,17 @@
 !                   Function inverse
 !                   Function norm
 !                   Function gmres
+!                   Function jacobiEigen
+!                   Function trace
+!                   Function inverseGMRESD
+!                   Function id
 !                   Subroutine sparse_sparse_prod ->  Operator:
+!                   Subroutine coef_sparse_prod   ->    
 !                   Subroutine sparse_vect_prod   ->     (*)
 !                   Subroutine sparse_sparse_sum  ->  Operator:
 !                                                        (+)
+!                   Subroutine sparse_sparse_sub  ->  Operator:
+!                                                        (-)
 !*************************************************************
 module SparseKit
   !***********************************************
@@ -53,7 +60,8 @@ module SparseKit
   implicit none
   private
   public :: Sparse, operator(*), operator(+), operator(-), transpose&
-       , norm, gmres, inverse, jacobiEigen, trace, inverseGMRESD, id
+       , norm, gmres, inverse, jacobiEigen, trace, inverseGMRESD, id&
+       , lcholesky
   type Triplet
      real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
@@ -113,6 +121,9 @@ module SparseKit
   interface trace
      module procedure trace
   end interface trace
+  interface lcholesky
+     module procedure lcholesky
+  end interface lcholesky
   interface gmres
      module procedure gmres 
   end interface gmres
@@ -708,7 +719,7 @@ contains
     do i = 1, b%n
        rowSize = b%AI(i+1) - b%AI(i)
        do k = counter, counter+rowSize-1
-          call c%append(-1.*b%A(k), i, b%AJ(k))
+          call c%append(-1.d0*b%A(k), i, b%AJ(k))
        end do
        counter = counter + rowSize
     end do
@@ -815,6 +826,49 @@ contains
     end do
     call a%makeCRS
   end function id
+  !***************************************************
+  ! lcholesky:
+  !     Computes Incomplete Cholesky factorization
+  !  
+  ! Parameters:
+  !     Input, a(Sparse)
+  !     Output, L(Sparse)
+  !***************************************************
+  function lcholesky(a) result(L)
+    implicit none
+    type(Sparse) :: a
+    type(Sparse) :: L
+    integer :: i, j, k
+    real(rkind) :: adder1, adder2, m( a%n, a%n)
+    L = sparse(nnz = (a%n**2+a%n)/2, rows = a%n)
+    m = 0.
+    do i = 1, a%n
+       do j = 1, a%n
+          adder1 = 0.
+          do k = 1, j-1
+             adder1 = adder1 + m(j,k)**2
+          end do
+          m(j,j) = sqrt(a%get(j,j)-adder1)
+          if( i > j) then
+             adder2 = 0.
+             do k = 1 , j-1
+                adder2 = adder2 + ( m(i,k) * m(j,k))
+             end do
+             m(i,j) = (1./m(j,j))*(a%get(i,j)-adder2)
+          end if
+       end do
+    end do
+    do i = 1, a%n
+          call L%append( m(i,i), i, i)
+       do j = 1, a%n
+          if( i > j) then
+             call L%append( m(i,j), i, j)
+          end if
+       end do
+    end do
+    call L%makeCRS
+    return
+  end function lcholesky
   !***************************************************
   ! gmres: 
   !   (generalized minimal residual method)
@@ -1030,7 +1084,7 @@ contains
     real(rkind) :: alpha
     alpha = 1.
     M = transpose(A)
-    do while (abs(alpha) > 1e-15)
+    do while (abs(alpha) > 1e-30)
        C = A * M
        G = Id(A%n) - C
        B = A * G

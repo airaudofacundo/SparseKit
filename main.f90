@@ -2,11 +2,11 @@ program test
   use SparseKit
   implicit none
   type(Sparse) :: matrixA
-  type(Sparse) :: inversematrixA
-  type(Sparse) :: inverseGMRESDmatrixA
+  type(Sparse) :: matrixL
+  type(Sparse) :: ver
 
-  matrixA = sparse(16,4)
-  
+  matrixA = sparse( nnz = 16, rows = 4)
+
   call matrixA%append( value =    4, row = 1, col = 1)
   call matrixA%append( value =  -30, row = 1, col = 2)
   call matrixA%append( value =   60, row = 1, col = 3)
@@ -26,19 +26,15 @@ program test
   
   call matrixA%makeCRS
 
-  print*,''
-  print*,'Matrix A'
+  print'(/,A)','Matrix A'
   call matrixA%printAll
 
-  inversematrixA = inverse(matrixA)
+  matrixL = lcholesky(matrixA)
+  print'(/,A)','Matrix L'
+  call matrixL%printAll
 
-  print*,''
-  print*,'Inverse'
-  call inversematrixA%printAll
-
-  print*,''
-  print*,'InverseGMRESD'
-  inverseGMRESDmatrixA = inverseGMRESD(matrixA)
-  call inverseGMRESDmatrixA%printAll
-
+  ver = matrixL * transpose(matrixL)
+  print'(/,A)','Verification'
+  call ver%printAll
+  
 end program test

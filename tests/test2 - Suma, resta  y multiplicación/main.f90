@@ -4,11 +4,12 @@ program test2
   type(Sparse) :: matrixA
   type(Sparse) :: matrixB
   type(Sparse) :: addition
+  type(Sparse) :: subtraction
   type(Sparse) :: multiplication
-  real*8       :: vector(4)
+  real*8       :: vector(4), coef
 
+  coef = 2.d0
   vector  = (/2.2, 6.3, 5.1, 7.5/)
-
   matrixA = sparse( nnz = 16, rows = 4)
 
   call matrixA%append( value =    4, row = 1, col = 1)
@@ -59,9 +60,17 @@ program test2
   addition = matrixA + matrixB
   print'(/,A)','A + B'
   call addition%printAll
+  
+  subtraction = matrixA - matrixB
+  print'(/,A)','A - B'
+  call subtraction%printAll
 
   multiplication = matrixA*matrixB
   print'(/,A)','A * B'
+  call multiplication%printAll
+
+  multiplication = coef*matrixA
+  print'(/,A)','2 * A'
   call multiplication%printAll
   
   print'(/,A)','A*V'

@@ -1,7 +1,11 @@
-program test1
+program test6
   use SparseKit
   implicit none
   type(Sparse) :: matrix
+  type(Sparse) :: inverseMatrix
+  type(Sparse) :: inverseGMRESDMatrix
+  type(Sparse) :: verification1
+  type(Sparse) :: verification2 
 
   matrix = sparse( nnz = 19, rows = 4)
 
@@ -24,9 +28,23 @@ program test1
   
   call matrix%makeCRS
 
-  print'(/,A,E12.5,/)','A(3,2) = ', matrix%get      ( 3, 3)
-  print'(A,1X,I0,/)','nnz    = ', matrix%getnnz()
-  print'(A,1X,I0,/)','n      = ', matrix%getn()
-  
-end program test1
+  print'(/,A)','Matrix'  
+  call matrix%printAll
 
+  print'(/,A)','Inverse matrix'
+  inverseMatrix = inverse(matrix)
+  call inverseMatrix%printAll
+
+  print'(/,A)','Verification 1'
+  verification1 = matrix*inverseMatrix
+  call verification1%printAll
+
+  print'(/,A)','Inverse GMRESD Algorithm  matrix'
+  inverseGMRESDMatrix = inverseGMRESD(matrix)
+  call inverseGMRESDMatrix%printAll
+  
+  print'(/,A)','Verification 2'
+  verification2 = matrix*inverseGMRESDMatrix
+  call verification2%printAll
+
+end program test6
