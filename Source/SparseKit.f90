@@ -134,6 +134,7 @@ module SparseKit
      module procedure jacobiEigen
   end interface jacobiEigen
   
+  
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
   !***********************************************
@@ -234,9 +235,10 @@ contains
   !     Input, -
   !     Output, CRS is usable
   !***************************************************
-  subroutine makeCRS(this)
+  subroutine makeCRS(this, sortRows)
     implicit none
     class(Sparse), intent(InOut) :: this
+    logical, intent(in), optional :: sortRows
     integer :: i
     isCRSDone = .true.
     allocate(this%rowCounter(this%n))
@@ -248,7 +250,9 @@ contains
     !Allocate auxA and auxAJ with nnz
     allocate(auxA(this%counter), auxAJ(this%counter))
     !Order A and AJ
-    call quicksort(this%triplet%row, this%triplet%col, this%triplet%A, 1, this%counter)
+    if(.not.present(sortRows) .or. sortRows) then
+       call quicksort(this%triplet%row, this%triplet%col, this%triplet%A, 1, this%counter)
+    end if
     !sum up duplicates
     call this%handleDuplicates()
     !Allocate A and AJ with nnz
@@ -307,6 +311,7 @@ contains
                 call swap(valueVector(k), valueVector(this%rowCounter(i)))
                 this%rowCounter(i) = this%rowCounter(i) - 1
                 repeats = repeats + 1
+                k = k - 1
              end if
           end do
           this%counter = this%counter + 1
@@ -408,17 +413,27 @@ contains
     integer :: i, j
     if(present(filename)) then
        open(fileunit, file = trim(filename), access = 'append')
+       write(fileunit,'(A,I0,A)') 'Printing ', this%nnz, ' non zeros'
+       write(fileunit,'(A,I0,A,I0)') 'Matrix dimension: ', this%n, 'x', this%n
+       write(fileunit,'(A)') '------------------------------------'
+       write(fileunit,'(A8,4X,2A12)') 'value', 'row', 'column'
+       write(fileunit,'(A)') '------------------------------------'
        do i = 1, this%n
           do j = this%AI(i), this%AI(i+1)-1
-             write(fileunit,'(A,I0,A,I0,A,E14.7)') 'Matriz value at row ', i, ' column ', this%AJ(j), ' is ', this%A(j)
+             write(fileunit,'(E12.6,I12,I12)')  this%A(j), i, this%AJ(j)
           end do
        end do
        close(fileunit)
        return
     end if
+    write(*,'(A,I0,A)') 'Printing ', this%nnz, ' non zeros'
+    write(*,'(A,I0,A,I0)') 'Matrix dimension: ', this%n, 'x', this%n
+    write(*,'(A)') '------------------------------------'
+    write(*,'(A8,4X,2A12)') 'value', 'row', 'column'
+    write(*,'(A)') '------------------------------------'
     do i = 1, size(this%AI)-1
        do j = this%AI(i), this%AI(i+1)-1
-          write(*,'(A,I0,A,I0,A,E14.7)') 'Matriz value at row ', i, ' column ', this%AJ(j), ' is ', this%A(j)
+             write(*,'(E12.6,I12,I12)')  this%A(j), i, this%AJ(j)
        end do
     end do
   end subroutine printNonZeros
@@ -560,7 +575,6 @@ contains
   !*              MODULE PROCEDURES              *
   !***********************************************
   
-  
   !***************************************************
   ! sparse_sparse_prod:
   !     performs the product between two given sparse
@@ -575,35 +589,45 @@ contains
     type(Sparse), intent(in) :: a
     type(Sparse), intent(in) :: b
     type(Sparse) :: c
+    type(Sparse) :: bTranspose
     real(rkind) :: Cij
     integer :: i, j, k
-    integer :: counter, aRowSize, bRowSize, ptr, l
+    integer :: nnz
+    logical :: nnzFound
     if(a%n /= b%n) then
        print'(A)', '** diferent sizes in input sparse matrices! **'
        return
     end if
-    c = sparse(nnz = max( a%nnz, b%nnz), rows = a%n)
-    counter = 1
+    bTranspose = transpose(b)
+    !find ammount of nnz
+    nnz = 0
     do i = 1, a%n
-       aRowSize = a%AI(i+1) - a%AI(i)
-       do j = 1, a%n
+       do j = 1, bTranspose%n
+          nnzFound = .false.
+          do k = a%AI(i), a%AI(i+1)-1
+             do l = bTranspose%AI(j), bTranspose%AI(j+1)-1
+                if(a%AJ(k) == bTranspose%AJ(l)) nnzFound = .true.
+             end do
+          end do
+          if(nnzFound) nnz = nnz + 1
+       end do
+    end do
+    c = sparse(nnz = nnz , rows = a%n)
+    do i = 1, a%n
+       do j = 1, bTranspose%n
           Cij = 0
-          do k = counter, counter+aRowSize-1
-             ptr = b%AI(a%AJ(k))
-             bRowSize = b%AI(a%AJ(k)+1) - b%AI(a%AJ(k))
-             do l = ptr, ptr+bRowSize-1
-                if(j == b%AJ(l)) then
-                   Cij = Cij + a%A(k)*b%A(l)
-                   EXIT
+          do k = a%AI(i), a%AI(i+1)-1
+             do l = bTranspose%AI(j), bTranspose%AI(j+1)-1
+                if(a%AJ(k) == bTranspose%AJ(l)) then
+                   Cij = Cij + a%A(k)*bTranspose%A(l)
                 end if
              end do
           end do
           if(abs(Cij) > 1d-12) call c%append(Cij, i, j)
        end do
-       counter = counter + aRowSize
     end do
-    
-    call c%makeCRS
+    call bTranspose%free()
+    call c%makeCRS(.false.)
   end function sparse_sparse_prod
   !***************************************************
   ! sparse_vect_prod(*):
@@ -765,7 +789,7 @@ contains
   end function transpose
   !***************************************************
   ! norm:
-  !     Computes de frobenius-norm of a sparse matrix
+  !     Computes the frobenius-norm of a sparse matrix
   !     https://en.wikipedia.org/wiki/Matrix_norm#Frobenius_norm
   !  
   ! Parameters:
@@ -812,7 +836,7 @@ contains
   !     Computes the identity matrix of order n
   !  
   ! Parameters:
-  !     Input, n(integerrkind)
+  !     Input, n(integer)
   !     Output, id(Sparse)
   !***************************************************
   function id(n) result(a)
