@@ -289,8 +289,8 @@ contains
     class(Sparse), intent(InOut) :: this
     logical :: mask
     integer :: i, j, k
-    allocate(rowVector(maxval(this%rowCounter)))
-    allocate(valueVector(maxval(this%rowCounter)))
+!!$    allocate(rowVector(maxval(this%rowCounter)))
+!!$    allocate(valueVector(maxval(this%rowCounter)))
     this%counter = 1
     repeats = 0
     do i = 1, this%n
@@ -321,8 +321,8 @@ contains
        end do
     end do
     this%counter = this%counter - 1
-    deallocate(rowVector)
-    deallocate(valueVector)
+!!$    deallocate(rowVector)
+!!$    deallocate(valueVector)
   end subroutine HandleDuplicates
   !***************************************************
   ! get:

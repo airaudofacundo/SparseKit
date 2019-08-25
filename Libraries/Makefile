@@ -1,7 +1,7 @@
 # Makefile
 
 COMPILER	:=  gfortran
-VPATH		:=  $(HOME)/Documentos/SparseKit/SparseKit/Source
+VPATH		:=  $(HOME)/SparseKit/SparseKit/Source
 BINDIR		:=  Bin
 OBJECTDIR	:=  Objects
 FFLAGS		:=  -g -O3 -static -J$(OBJECTDIR)

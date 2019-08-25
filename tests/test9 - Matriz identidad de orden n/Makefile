@@ -1,8 +1,8 @@
 # Makefile
 
 COMPILER	:=  gfortran
-LIB		:=  $(HOME)/Documentos/SparseKit/SparseKit/Libraries
-LIBOBJECTS	:=  $(HOME)/Documentos/SparseKit/SparseKit/Libraries/Objects
+LIB		:=  $(HOME)/SparseKit/SparseKit/Libraries
+LIBOBJECTS	:=  $(HOME)/SparseKit/SparseKit/Libraries/Objects
 FFLAGS		:=  -g -O3
 FFLAGSDebug 	:=  -g -Wall -fcheck=all
 
