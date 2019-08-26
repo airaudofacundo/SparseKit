@@ -1,4 +1,4 @@
-GFORTRAN module version '10' created from /home/marco/SparseKit/SparseKit/Source/quicksort.f90
+GFORTRAN module version '10' created from Source/quicksort.f90
 MD5:7723b5c52ea73afbb5a5fb69b44c3889 -- If you edit this, you'll get what you deserve.
 
 (() () () () () () () () () () () () () () () () () () () () () () ()
