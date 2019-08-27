@@ -1,56 +1,60 @@
-Module tools
+module tools
 !!$ Intrinsic standart iso_fortran Real types REAL32, REAL64, REAL128
-  Use, intrinsic :: iso_fortran_env
-  Implicit none
+  use, intrinsic :: iso_fortran_env
+  implicit none
 
-  Public :: sp, dp, qp, rkind
-  Integer, parameter :: sp = REAL32
-  Integer, parameter :: dp = REAL64
-  Integer, parameter :: qp = REAL128
-  integer, parameter :: rkind = dp
+  public :: sp, dp, qp, rkind
+  integer, parameter :: isp = int16
+  integer, parameter :: idp = int32
+  integer, parameter :: iqp = int64
+  integer, parameter :: rsp = REAL32
+  integer, parameter :: rdp = REAL64
+  integer, parameter :: rqp = REAL128
+  integer, parameter :: ikind = idp
+  integer, parameter :: rkind = rdp
 
-  Interface assignment(=)
-     Procedure assignAnyTypeToR8Scalar
-     Procedure assignAnyTypeToR8Array
-  End Interface assignment(=)
+  interface assignment(=)
+     procedure assignAnyTypeToR8Scalar
+     procedure assignAnyTypeToR8Array
+  end interface assignment(=)
 
-Contains
+contains
   
-  Subroutine assignAnyTypeToR8Scalar(output,input)
-    Implicit none
-    Real(dp), Intent(Out) :: output
-    Class(*), Intent(In) :: input
-    Select type(input)
-    Type is(Integer)
+  subroutine assignAnyTypeToR8Scalar(output,input)
+    implicit none
+    real(dp), intent(Out) :: output
+    class(*), intent(In) :: input
+    select type(input)
+    type is(integer)
        output=input
-    Type is(Real(sp))
+    type is(real(sp))
        output=input
-    Type is(Real(dp))
+    type is(real(dp))
        output=input
-    Type is(Real(qp))
+    type is(real(qp))
        output=input
-    Type is(Character(*))
-       Write(*,*) 'Wrong type of argument input!'
-       STOP
-    End Select
-  End Subroutine assignAnyTypeToR8Scalar
+    type is(character(*))
+       write(*,*) 'Wrong type of argument input!'
+       stop
+    end select
+  end subroutine assignAnyTypeToR8Scalar
 
-  Subroutine assignAnyTypeToR8Array(output,input)
-    Implicit none
-    Real(dp), Intent(Out), dimension(:) :: output
-    Class(*), Intent(In), dimension(:) :: input
-    Select type(input)
-    Type is(Integer)
+  subroutine assignAnyTypeToR8Array(output,input)
+    implicit none
+    real(dp), intent(Out), dimension(:) :: output
+    class(*), intent(In), dimension(:) :: input
+    select type(input)
+    type is(integer)
        output=input
-    Type is(Real(sp))
+    type is(real(sp))
        output=input
-    Type is(Real(dp))
+    type is(real(dp))
        output=input
-    Type is(Real(qp))
+    type is(real(qp))
        output=input
-    Type is(Character(*))
-       Write(*,*) 'Wrong type of argument input!'
-       STOP
-    End Select
-  End Subroutine assignAnyTypeToR8Array
-End Module tools
+    type is(character(*))
+       write(*,*) 'Wrong type of argument input!'
+       stop
+    end select
+  end subroutine assignAnyTypeToR8Array
+end module tools
