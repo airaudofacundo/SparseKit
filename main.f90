@@ -36,5 +36,7 @@ program test
   ver = matrixL * transpose(matrixL)
   print'(/,A)','Verification'
   call ver%printAll
+
+  print*, det(matrixA)
   
 end program test

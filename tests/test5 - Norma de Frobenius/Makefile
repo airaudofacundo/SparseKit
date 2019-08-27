@@ -1,8 +1,8 @@
 # Makefile
 
 COMPILER	:=  gfortran
-LIB		:=  $(HOME)/Documentos/SparseKit/SparseKit/Libraries
-LIBOBJECTS	:=  $(HOME)/Documentos/SparseKit/SparseKit/Libraries/Objects
+LIB		:=  $(HOME)/SparseKit/SparseKit/SparseLibrary-v0.9
+LIBOBJECTS	:=  $(HOME)/SparseKit/SparseKit/SparseLibrary-v0.9/Objects
 FFLAGS		:=  -g -O3
 FFLAGSDebug 	:=  -g -Wall -fcheck=all
 
@@ -23,4 +23,3 @@ main.o : main.f90
 
 clean:
 	rm -f main main.o
-#gfortran main.f90 Libraries/sparseLib.a -ILibraries/Objects -o main

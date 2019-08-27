@@ -62,7 +62,7 @@ module SparseKit
   private
   public :: Sparse, operator(*), operator(+), operator(-), transpose&
        , norm, gmres, inverse, jacobiEigen, trace, inverseGMRESD, id&
-       , lcholesky
+       , lcholesky, det
   type Triplet
      real(rkind), dimension(:), allocatable :: A
      integer, dimension(:), allocatable :: row
@@ -122,6 +122,9 @@ module SparseKit
   interface trace
      module procedure trace
   end interface trace
+  interface det
+     module procedure det
+  end interface det
   interface lcholesky
      module procedure lcholesky
   end interface lcholesky
@@ -287,8 +290,8 @@ contains
     class(Sparse), intent(InOut) :: this
     logical :: mask
     integer :: i, j, k
-    allocate(rowVector(maxval(this%rowCounter)))
-    allocate(valueVector(maxval(this%rowCounter)))
+!!$    allocate(rowVector(maxval(this%rowCounter)))
+!!$    allocate(valueVector(maxval(this%rowCounter)))
     this%counter = 1
     repeats = 0
     do i = 1, this%n
@@ -319,8 +322,8 @@ contains
        end do
     end do
     this%counter = this%counter - 1
-    deallocate(rowVector)
-    deallocate(valueVector)
+!!$    deallocate(rowVector)
+!!$    deallocate(valueVector)
   end subroutine HandleDuplicates
   !***************************************************
   ! get:
@@ -832,6 +835,31 @@ contains
        end do
     end do
   end function trace
+  !***************************************************
+  ! det:
+  !     Computes the determinant
+  !  
+  ! Parameters:
+  !     Input, a(Sparse)
+  !     Output, det(Realrkind)
+  !***************************************************
+  real(rkind) function det(a)
+    implicit none
+    type(Sparse), intent(in) :: a
+    type(Sparse) :: m
+    integer :: i, j
+    det = 1.
+    m = lcholesky(a)
+    do i = 1, m%n
+       do j = m%AI(i), m%AI(i+1)-1
+          if(m%AJ(j) == i) then
+             det = det * m%A(j)
+             exit
+          end if
+       end do
+    end do
+    det = det**2
+  end function det
   !***************************************************
   ! id:
   !     Computes the identity matrix of order n
