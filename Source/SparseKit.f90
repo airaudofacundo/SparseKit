@@ -28,6 +28,7 @@
 !                   Subroutine append
 !                   Subroutine makeCRS
 !                   Function get
+!                   Function getn
 !                   Function getNonZeros
 !                   Subroutine printValue
 !                   Subroutine printNonZeros
@@ -46,7 +47,7 @@
 !                   Subroutine sparse_sparse_prod ->  Operator:
 !                   Subroutine coef_sparse_prod   ->    
 !                   Subroutine sparse_vect_prod   ->     (*)
-!                   Subroutine sparse_sparse_sum  ->  Operator:
+!                   Subroutine sparse_sparse_add  ->  Operator:
 !                                                        (+)
 !                   Subroutine sparse_sparse_sub  ->  Operator:
 !                                                        (-)
@@ -125,7 +126,7 @@ module SparseKit
      module procedure lcholesky
   end interface lcholesky
   interface gmres
-     module procedure gmres 
+     module procedure gmres
   end interface gmres
   interface inverse
      module procedure inverse
@@ -612,7 +613,7 @@ contains
           if(nnzFound) nnz = nnz + 1
        end do
     end do
-    c = sparse(nnz = nnz , rows = a%n)
+    c = sparse(nnz = nnz, rows = a%n)
     do i = 1, a%n
        do j = 1, bTranspose%n
           Cij = 0
