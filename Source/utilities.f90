@@ -3,7 +3,7 @@ module tools
   use, intrinsic :: iso_fortran_env
   implicit none
 
-  public :: sp, dp, qp, rkind
+  public :: isp, idp, iqp, ikind, rsp, rdp, rqp, rkind
   integer, parameter :: isp = int16
   integer, parameter :: idp = int32
   integer, parameter :: iqp = int64
@@ -22,16 +22,16 @@ contains
   
   subroutine assignAnyTypeToR8Scalar(output,input)
     implicit none
-    real(dp), intent(Out) :: output
+    real(rkind), intent(Out) :: output
     class(*), intent(In) :: input
     select type(input)
     type is(integer)
        output=input
-    type is(real(sp))
+    type is(real(rsp))
        output=input
-    type is(real(dp))
+    type is(real(rdp))
        output=input
-    type is(real(qp))
+    type is(real(rqp))
        output=input
     type is(character(*))
        write(*,*) 'Wrong type of argument input!'
@@ -41,16 +41,16 @@ contains
 
   subroutine assignAnyTypeToR8Array(output,input)
     implicit none
-    real(dp), intent(Out), dimension(:) :: output
+    real(rkind), intent(Out), dimension(:) :: output
     class(*), intent(In), dimension(:) :: input
     select type(input)
     type is(integer)
        output=input
-    type is(real(sp))
+    type is(real(rsp))
        output=input
-    type is(real(dp))
+    type is(real(rdp))
        output=input
-    type is(real(qp))
+    type is(real(rqp))
        output=input
     type is(character(*))
        write(*,*) 'Wrong type of argument input!'

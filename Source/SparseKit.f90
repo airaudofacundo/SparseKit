@@ -11,8 +11,8 @@
 ! Description (brief):
 !                     Module for all algebraic and functional
 !                     Operations with Sparse Matrices. That is,
-!                     For matrices where the number of nonzeros
-!                     highly exceeds the number of zeros, this
+!                     For matrices where the number of zeros
+!                     highly exceeds the number of nonzeros, this
 !                     tools allow you to declare a derived
 !                     data type to work with them. 
 !************************************************************* 
