@@ -1,7 +1,10 @@
-program test5
+program test8
   use SparseKit
   implicit none
   type(Sparse) :: matrix
+  real*8 :: vector(4)
+
+  vector = (/2.2, 6.3, 5.1, 7.5/)
 
   matrix = sparse( nnz = 12, rows = 4)
 
@@ -20,6 +23,14 @@ program test5
   
   call matrix%makeCRS
 
-  print'(/,A,E14.7)','Norma de Frobenius = ', norm(matrix)
+  print'(/,A)','Matrix - M'
+  call matrix%printAll
 
-end program test5
+  print'(/,A)','Vector - V'
+  print'(*(E14.7,2X))', vector
+  
+  print'(/,A)','Solution - X'
+
+  print'(/,A)','Verification (M*X=V)'
+
+end program test8 

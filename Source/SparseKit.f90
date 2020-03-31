@@ -27,6 +27,9 @@
   !                   Subroutine update
   !                   Subroutine append
   !                   Subroutine makeCRS
+  !                   Subroutine appendPostCRS
+  !                   Subroutine change
+  !                   Subroutine setDirichlet
   !                   Function get
   !                   Function getn
   !                   Function getNonZeros
@@ -84,6 +87,7 @@ module SparseKit
      integer(ikind)                            :: nnz
      integer(ikind)                            :: counter
      type(triplet)                             :: triplet
+     logical                                   :: isCRSDone
      
    contains
      
@@ -140,11 +144,14 @@ module SparseKit
   interface trace
      module procedure trace
   end interface trace
+
+  interface id
+     module procedure id
+  end interface id
   
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
   !***********************************************
-  logical :: isCRSDone = .false.
   real(rkind), dimension(:), allocatable :: valueVector
   real(rkind), dimension(:), allocatable :: auxA
   integer(ikind), dimension(:), allocatable :: auxAJ
@@ -183,6 +190,7 @@ contains
     this%triplet%row = 0
     this%triplet%col = 0
     this%counter = 0
+    this%isCRSDone = .false.
   end subroutine init
   
   !***************************************************
@@ -198,7 +206,7 @@ contains
     class(sparse), intent(inout) :: this
     integer(ikind), intent(in) :: nnz
     integer(ikind), intent(in) :: rows
-    isCRSDone = .false.
+    this%isCRSDone = .false.
     if(allocated(this%triplet%A)) then
        deallocate(this%triplet%A, this%triplet%row, this%triplet%col)
     end if
@@ -214,6 +222,7 @@ contains
     this%triplet%row = 0
     this%triplet%col = 0
     this%counter = 0
+    this%isCRSDone = .false.
   end subroutine update
   
   !***************************************************
@@ -230,7 +239,7 @@ contains
     class(Sparse), intent(inout) :: this
     real(rkind), intent(In) :: val
     integer(ikind), intent(In) :: row, col
-    if(isCRSDone) call this%appendPostCRS(val, row, col)
+    if(this%isCRSDone) call this%appendPostCRS(val, row, col)
     this%counter = this%counter + 1
     this%triplet%A(this%counter) = val
     this%triplet%row(this%counter) = row
@@ -251,7 +260,7 @@ contains
     class(Sparse), intent(inout) :: this
     logical, intent(in), optional :: sortRows
     integer(ikind) :: i
-    isCRSDone = .true.
+    this%isCRSDone = .true.
     allocate(this%rowCounter(this%n))
     !This%Counter entries in each row, including duplicates
     this%rowCounter = 0
@@ -410,7 +419,7 @@ contains
     do while(index < this%AI(row+1))
        this%A(index) = 0.d0
        if(this%AJ(index) == row) then
-          this%A(index) == 1.d0
+          this%A(index) = 1.d0
        end if
        index = index + 1
     end do
@@ -583,7 +592,7 @@ contains
     integer(ikind) :: i, j, k
     integer(ikind) :: rowSize
     integer(ikind), dimension(:), allocatable :: AI
-    if(isCRSDone) then
+    if(this%isCRSDone) then
        allocate(AI(size(this%AI)))
        do i = 1, size(AI)
           AI(i) = this%AI(i)
@@ -972,15 +981,16 @@ contains
     type(Sparse) :: G
     type(Sparse) :: M
     real(rkind) :: alpha
-    alpha = 1.
-    M = transpose(A)
-    do while (abs(alpha) > 1e-30)
-       C = A * M
-       G = Id(A%n) - C
-       B = A * G
-       alpha = trace(transpose(G)*B)/(norm(B))**2
-       M = M + alpha * G
-    end do
+	print*, 'Revisar codigo'
+!    alpha = 1.1
+!    M = transpose(A)
+!    do while (abs(alpha) > 1e-20)
+!       C = A * M
+!       G = Id(A%n) - C
+!       B = A * G
+!       alpha = trace(transpose(G)*B)/(norm(B))**2
+!       M = M + alpha * G
+!    end do
     return
   end function inverseGMRESD
   subroutine pardisoMKL(p, maxfct, mnum, mtype, phase, stiffness,&

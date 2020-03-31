@@ -1,12 +1,15 @@
-program test
+program test9
   use UtilitiesM
   use SparseKit
   implicit none
-  type(Sparse) :: matrixA
-  type(Sparse) :: matrixL
-  type(Sparse) :: ver
+  type(Sparse) :: identity, matrixA, matrixL
+  integer :: n
 
-  matrixA = sparse( nnz = 16, rows = 4)
+  print'(A)', 'SparseKit Test'
+
+  n = 4
+
+  matrixA = sparse(nnz = 16, rows = 4)
 
   call matrixA%append( val =    4._rkind, row = 1, col = 1)
   call matrixA%append( val =  -30._rkind, row = 1, col = 2)
@@ -27,11 +30,16 @@ program test
   
   call matrixA%makeCRS
 
-  print'(/,A)','Matrix A'
+  print'(/,A)', 'Matrix A'
   call matrixA%printAll
+  
+  identity = id(n)
+
+  print'(/,A)', 'Identity'
+  call identity%printAll
 
   matrixL = transpose(matrixA)
   print'(/,A)','Matrix L'
   call matrixL%printAll
   
-end program test
+end program test9
