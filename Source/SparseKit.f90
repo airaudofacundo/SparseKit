@@ -849,15 +849,16 @@ contains
     type(Sparse) :: G
     type(Sparse) :: M
     real(rkind) :: alpha
-    alpha = 1.
-    M = transpose(A)
-    do while (abs(alpha) > 1e-30)
-       C = A * M
-       G = Id(A%n) - C
-       B = A * G
-       alpha = trace(transpose(G)*B)/(norm(B))**2
-       M = M + alpha * G
-    end do
+	print*, 'Revisar codigo'
+!    alpha = 1.1
+!    M = transpose(A)
+!    do while (abs(alpha) > 1e-20)
+!       C = A * M
+!       G = Id(A%n) - C
+!       B = A * G
+!       alpha = trace(transpose(G)*B)/(norm(B))**2
+!       M = M + alpha * G
+!    end do
     return
   end function inverseGMRESD
   subroutine pardisoMKL(p, maxfct, mnum, mtype, phase, stiffness,&

@@ -11,23 +11,22 @@ program test2
   coef = 2.d0
   vector  = (/2.2, 6.3, 5.1, 7.5/)
   matrixA = sparse( nnz = 16, rows = 4)
-
-  call matrixA%append( value =    4, row = 1, col = 1)
-  call matrixA%append( value =  -30, row = 1, col = 2)
-  call matrixA%append( value =   60, row = 1, col = 3)
-  call matrixA%append( value =  -35, row = 1, col = 4)
-  call matrixA%append( value =  -30, row = 2, col = 1)
-  call matrixA%append( value =  300, row = 2, col = 2)
-  call matrixA%append( value = -675, row = 2, col = 3)
-  call matrixA%append( value =  420, row = 2, col = 4)
-  call matrixA%append( value =   60, row = 3, col = 1)
-  call matrixA%append( value = -675, row = 3, col = 2)
-  call matrixA%append( value = 1620, row = 3, col = 3)
-  call matrixA%append( value =-1050, row = 3, col = 4)
-  call matrixa%append( value =  -35, row = 4, col = 1)
-  call matrixA%append( value =  420, row = 4, col = 2)
-  call matrixA%append( value =-1050, row = 4, col = 3)
-  call matrixA%append( value =  700, row = 4, col = 4)
+  call matrixA%append( val =    4.d0, row = 1, col = 1)
+  call matrixA%append( val =  -30.d0, row = 1, col = 2)
+  call matrixA%append( val =   60.d0, row = 1, col = 3)
+  call matrixA%append( val =  -35.d0, row = 1, col = 4)
+  call matrixA%append( val =  -30.d0, row = 2, col = 1)
+  call matrixA%append( val =  300.d0, row = 2, col = 2)
+  call matrixA%append( val = -675.d0, row = 2, col = 3)
+  call matrixA%append( val =  420.d0, row = 2, col = 4)
+  call matrixA%append( val =   60.d0, row = 3, col = 1)
+  call matrixA%append( val = -675.d0, row = 3, col = 2)
+  call matrixA%append( val = 1620.d0, row = 3, col = 3)
+  call matrixA%append( val =-1050.d0, row = 3, col = 4)
+  call matrixA%append( val =  -35.d0, row = 4, col = 1)
+  call matrixA%append( val =  420.d0, row = 4, col = 2)
+  call matrixA%append( val =-1050.d0, row = 4, col = 3)
+  call matrixA%append( val =  700.d0, row = 4, col = 4)
   
   call matrixA%makeCRS
 
@@ -36,18 +35,18 @@ program test2
 
   matrixB = sparse( nnz = 12, rows = 4)
 
-  call matrixB%append( value =    4, row = 1, col = 1)
-  call matrixB%append( value =    1, row = 1, col = 2)
-  call matrixB%append( value =   60, row = 1, col = 3)
-  call matrixB%append( value =   -5, row = 1, col = 4)
-  call matrixB%append( value =  300, row = 2, col = 2)
-  call matrixB%append( value = -675, row = 2, col = 3)
-  call matrixB%append( value =  420, row = 2, col = 4)
-  call matrixB%append( value =   60, row = 3, col = 1)
-  call matrixB%append( value =    1, row = 3, col = 3)
-  call matrixB%append( value =  -35, row = 4, col = 1)
-  call matrixB%append( value =  420, row = 4, col = 2)
-  call matrixB%append( value =  700, row = 4, col = 4)
+  call matrixB%append( val =    4.d0, row = 1, col = 1)
+  call matrixB%append( val =    1.d0, row = 1, col = 2)
+  call matrixB%append( val =   60.d0, row = 1, col = 3)
+  call matrixB%append( val =   -5.d0, row = 1, col = 4)
+  call matrixB%append( val =  300.d0, row = 2, col = 2)
+  call matrixB%append( val = -675.d0, row = 2, col = 3)
+  call matrixB%append( val =  420.d0, row = 2, col = 4)
+  call matrixB%append( val =   60.d0, row = 3, col = 1)
+  call matrixB%append( val =    1.d0, row = 3, col = 3)
+  call matrixB%append( val =  -35.d0, row = 4, col = 1)
+  call matrixB%append( val =  420.d0, row = 4, col = 2)
+  call matrixB%append( val =  700.d0, row = 4, col = 4)
   
   call matrixB%makeCRS
 
@@ -55,7 +54,7 @@ program test2
   call matrixB%printAll
 
   print'(/,A)','Vector'
-  print'(*(E10.4,2X))', vector
+  print'(*(E14.7,2X))', vector
 
   addition = matrixA + matrixB
   print'(/,A)','A + B'
@@ -74,6 +73,6 @@ program test2
   call multiplication%printAll
   
   print'(/,A)','A*V'
-  print'(*(E10.4,2X))', matrixA * vector
+  print'(*(E14.7,2X))', matrixA * vector
 
 end program test2
