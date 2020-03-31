@@ -1,4 +1,4 @@
-module tools
+module UtilitiesM
 !!$ Intrinsic standart iso_fortran Real types REAL32, REAL64, REAL128
   use, intrinsic :: iso_fortran_env
   implicit none
@@ -13,10 +13,10 @@ module tools
   integer, parameter :: ikind = idp
   integer, parameter :: rkind = rdp
 
-  interface assignment(=)
+  interface assignAnyTypeToR8
      procedure assignAnyTypeToR8Scalar
      procedure assignAnyTypeToR8Array
-  end interface assignment(=)
+  end interface assignAnyTypeToR8
 
 contains
   
@@ -57,4 +57,5 @@ contains
        stop
     end select
   end subroutine assignAnyTypeToR8Array
-end module tools
+  
+end module UtilitiesM

@@ -1,126 +1,146 @@
-!*************************************************************
-!           Instituto Universitario Aeronautico
-!                Dpto. Mecanica Aeronautica
-!*************************************************************
-! Filename      : SparseKit.f90
-! Version       : 0.9
-! Date          : 14-08-2019
-! Programmer(s) : F. Airaudo(fairaudo574@alumnos.iua.edu.ar)
-!                 M. Zuñiga(mzuniga433@alumnos.iua.edu.ar)
-!*************************************************************
-! Description (brief):
-!                     Module for all algebraic and functional
-!                     Operations with Sparse Matrices. That is,
-!                     For matrices where the number of nonzeros
-!                     highly exceeds the number of zeros, this
-!                     tools allow you to declare a derived
-!                     data type to work with them. 
-!************************************************************* 
-! Dependecies:
-!             Use tools        - Filename: Utilities.f90
-!             Use QuickSortMod - Filename: quicksort.f90
-!*************************************************************
-! Public procedures:
-!              Type(Sparse)
-!              Derived type Procedures 
-!                   Subroutine init
-!                   Subroutine update
-!                   Subroutine append
-!                   Subroutine makeCRS
-!                   Function get
-!                   Function getn
-!                   Function getNonZeros
-!                   Subroutine printValue
-!                   Subroutine printNonZeros
-!                   Subroutine printAll
-!                   Subroutine deleteRowAndCol
-!                   Subroutine free
-!              Module Procedures:
-!                   Function transpose
-!                   Function norm
-!                   Function trace
-!                   Function inverseGMRESD
-!                   Function id
-!                   Subroutine pardisoMKL (MKL_LIBRARY)
-!                   Subroutine sparse_sparse_prod ->  Operator:
-!                   Subroutine coef_sparse_prod   ->    
-!                   Subroutine sparse_vect_prod   ->     (*)
-!                   Subroutine sparse_sparse_add  ->  Operator:
-!                                                        (+)
-!                   Subroutine sparse_sparse_sub  ->  Operator:
-!                                                        (-)
-!*************************************************************
+  !*************************************************************
+  !           Instituto Universitario Aeronautico
+  !                Dpto. Mecanica Aeronautica
+  !*************************************************************
+  ! Filename      : SparseKit.f90
+  ! Version       : 0.9
+  ! Date          : 14-08-2019
+  ! Programmer(s) : F. Airaudo(fairaudo574@alumnos.iua.edu.ar)
+  !                 M. Zuñiga(mzuniga433@alumnos.iua.edu.ar)
+  !*************************************************************
+  ! Description (brief):
+  !                     Module for all algebraic and functional
+  !                     Operations with Sparse Matrices. That is,
+  !                     For matrices where the number of nonzeros
+  !                     highly exceeds the number of zeros, this
+  !                     tools allow you to declare a derived
+  !                     data type to work with them. 
+  !************************************************************* 
+  ! Dependecies:
+  !             Use tools        - Filename: Utilities.f90
+  !             Use QuickSortMod - Filename: quicksort.f90
+  !*************************************************************
+  ! Public procedures:
+  !              Type(Sparse)
+  !              Derived type Procedures 
+  !                   Subroutine init
+  !                   Subroutine update
+  !                   Subroutine append
+  !                   Subroutine makeCRS
+  !                   Function get
+  !                   Function getn
+  !                   Function getNonZeros
+  !                   Subroutine printValue
+  !                   Subroutine printNonZeros
+  !                   Subroutine printAll
+  !                   Subroutine deleteRowAndCol
+  !                   Subroutine free
+  !              Module Procedures:
+  !                   Function transpose
+  !                   Function norm
+  !                   Function trace
+  !                   Function inverseGMRESD
+  !                   Function id
+  !                   Subroutine pardisoMKL (MKL_LIBRARY)
+  !                   Subroutine sparse_sparse_prod ->  Operator:
+  !                   Subroutine coef_sparse_prod   ->    
+  !                   Subroutine sparse_vect_prod   ->     (*)
+  !                   Subroutine sparse_sparse_add  ->  Operator:
+  !                                                        (+)
+  !                   Subroutine sparse_sparse_sub  ->  Operator:
+  !                                                        (-)
+  !*************************************************************
+
 include 'mkl_pardiso.f90'
+  
 module SparseKit
+
   !***********************************************
   !*                 EXTERNS                     *
   !***********************************************
-  use tools
-  use quickSortMod
+  use UtilitiesM
+  use quickSortM
   use mkl_pardiso
+  
   implicit none
+  
   private
   public :: Sparse, operator(*), operator(+), operator(-), transpose&
        , norm, trace, inverseGMRESD, id, pardisoMKL
+  
   type Triplet
-     real(rkind), dimension(:), allocatable :: A
+     real(rkind)   , dimension(:), allocatable :: A
      integer(ikind), dimension(:), allocatable :: row
      integer(ikind), dimension(:), allocatable :: col
   end type Triplet
+  
   type Sparse
-     !private
-     real(rkind), dimension(:), allocatable :: A
+     private
+     real(rkind)   , dimension(:), allocatable :: A
      integer(ikind), dimension(:), allocatable :: AI
      integer(ikind), dimension(:), allocatable :: AJ
      integer(ikind), dimension(:), allocatable :: rowCounter
-     integer(ikind) :: n
-     integer(ikind) :: nnz
-     integer(ikind) :: counter
-     type(triplet) :: triplet
+     integer(ikind)                            :: n
+     integer(ikind)                            :: nnz
+     integer(ikind)                            :: counter
+     type(triplet)                             :: triplet
+     
    contains
-     procedure, public :: init
-     procedure, public :: update
-     procedure, public :: append
-     procedure, public :: makeCRS
+     
+     procedure, public  :: init
+     procedure, public  :: update
+     procedure, public  :: append
+     procedure, public  :: makeCRS
 
-     procedure, public :: get
-     procedure, public :: getnnz
-     procedure, public :: getn
+     procedure, public  :: appendPostCRS
+     procedure, public  :: change
+     procedure, public  :: setDirichlet
 
-     procedure, public :: printValue
-     procedure, public :: printNonZeros
-     procedure, public :: printAll
+     procedure, public  :: get
+     procedure, public  :: getnnz
+     procedure, public  :: getn
 
-     procedure, public :: deleteRowAndCol
+     procedure, public  :: printValue
+     procedure, public  :: printNonZeros
+     procedure, public  :: printAll
 
-     procedure, public :: free
+     procedure, public  :: deleteRowAndCol
+
+     procedure, public  :: free
 
      procedure, private :: handleDuplicates
   end type Sparse
+
+  interface sparse
+     procedure constructor
+  end interface sparse
 
   interface operator(*)
      module procedure sparse_sparse_prod
      module procedure sparse_vect_prod
      module procedure coef_sparse_prod
   end interface operator(*)
+  
   interface operator(+)
      module procedure sparse_sparse_add
   end interface operator(+)
+  
   interface operator(-)
      module procedure sparse_sparse_sub
   end interface operator(-)
-  interface sparse
-     procedure constructor
-  end interface sparse
+  
   interface transpose
      module procedure transpose
   end interface transpose
+  
   interface norm
      module procedure norm
   end interface norm
+  
   interface trace
      module procedure trace
   end interface trace
+  
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
   !***********************************************
@@ -132,6 +152,7 @@ module SparseKit
   integer(ikind) :: repeats, l
 
 contains
+  
   !***************************************************
   ! Constructor:
   !     Initializes the object with and estimate of
@@ -163,6 +184,7 @@ contains
     this%triplet%col = 0
     this%counter = 0
   end subroutine init
+  
   !***************************************************
   ! update:
   !     updates basic values
@@ -193,6 +215,7 @@ contains
     this%triplet%col = 0
     this%counter = 0
   end subroutine update
+  
   !***************************************************
   ! append:
   !     takes values one by one and appends it to a
@@ -207,11 +230,13 @@ contains
     class(Sparse), intent(inout) :: this
     real(rkind), intent(In) :: val
     integer(ikind), intent(In) :: row, col
+    if(isCRSDone) call this%appendPostCRS(val, row, col)
     this%counter = this%counter + 1
     this%triplet%A(this%counter) = val
     this%triplet%row(this%counter) = row
     this%triplet%col(this%counter) = col
   end subroutine append
+  
   !***************************************************
   ! makeCRS:
   !     Once all values have been appended to the
@@ -258,6 +283,7 @@ contains
     deallocate(this%rowCounter)
     this%nnz = size(this%AJ)
   end subroutine makeCRS
+  
   !***************************************************
   ! handleDuplicates:
   !     Sums up every duplicate on the triplet, also
@@ -308,6 +334,88 @@ contains
     deallocate(rowVector)
     deallocate(valueVector)
   end subroutine HandleDuplicates
+
+  !***************************************************
+  ! appendPostCRS:
+  !     Appends a value to the matrix, if that space
+  !     is allocated, said value is added to the
+  !     existing one
+  !  
+  ! Parameters:
+  !     Input, val(realrkind), row(int), col(int)
+  !***************************************************
+  subroutine appendPostCRS(this, val, row, col)
+    implicit none
+    class(Sparse), intent(inout) :: this
+    real(rkind), intent(in) :: val
+    integer(ikind), intent(in) :: row
+    integer(ikind), intent(in) :: col
+    integer(ikind) :: index
+    logical :: positionExists = .false.
+    index = this%AI(row)
+    do while(index < this%AI(row+1))
+       if(this%AJ(index) == col) then
+          positionExists = .true.
+          this%A(index) = this%A(index) + val
+       end if
+       index = index + 1
+    end do
+    if(.not.positionExists) then
+       print'(A)', '** Attempted to append a new value after making the CRS, implementation soon maybe **'
+    end if
+  end subroutine appendPostCRS
+
+  !***************************************************
+  ! change:
+  !     Changes a value in the matrix
+  !  
+  ! Parameters:
+  !     Input, val(realrkind), row(int), col(int)
+  !***************************************************
+  subroutine change(this, val, row, col)
+    implicit none
+    class(Sparse), intent(inout) :: this
+    real(rkind), intent(in) :: val
+    integer(ikind), intent(in) :: row
+    integer(ikind), intent(in) :: col
+    integer(ikind) :: index
+    logical :: positionExists = .false.
+    index = this%AI(row)
+    do while(index < this%AI(row+1))
+       if(this%AJ(index) == col) then
+          positionExists = .true.
+          this%A(index) = val
+       end if
+       index = index + 1
+    end do
+    if(.not.positionExists) then
+       print'(A)', '** Attempted to change the value in a position not allocated before making the CRS, implementation soon maybe **'
+    end if
+  end subroutine change
+
+  !***************************************************
+  ! setDirichlet:
+  !     On a given row, nulls all the values except
+  !     the one on the diagonal, which is turned to 1
+  !  
+  ! Parameters:
+  !     Input, row(int)
+  !***************************************************
+  subroutine setDirichlet(this, row)
+    implicit none
+    class(Sparse), intent(inout) :: this
+    integer(ikind), intent(in) :: row
+    integer(ikind) :: index
+    index = this%AI(row)
+    do while(index < this%AI(row+1))
+       this%A(index) = 0.d0
+       if(this%AJ(index) == row) then
+          this%A(index) == 1.d0
+       end if
+       index = index + 1
+    end do
+  end subroutine setDirichlet
+  
   !***************************************************
   ! get:
   !     Gives sparse matrix's value from row i
@@ -333,6 +441,7 @@ contains
     end do
     get = 0.0_rkind
   end function get
+  
   !***************************************************
   ! getnnz:
   !     given ammount of non zeros
@@ -346,6 +455,7 @@ contains
     class(Sparse), intent(inout) :: this
     getnnz = this%nnz
   end function getnnz
+  
   !***************************************************
   ! getn:
   !     get order of matrix
@@ -359,6 +469,7 @@ contains
     class(Sparse), intent(inout) :: this
     getn = this%n
   end function getn
+  
   !***************************************************
   ! printValue:
   !     prints a single value either on console or a
@@ -383,6 +494,7 @@ contains
        write(*,'(A,I0,A,I0,A,E14.7)') 'Matriz value at row ', i, ' column ', j, ' is ', this%get(i,j)
     end if
   end subroutine printValue
+  
   !***************************************************
   ! printNonZeros:
   !     Prints all non zeros in a list like format,
@@ -424,6 +536,7 @@ contains
        end do
     end do
   end subroutine printNonZeros
+  
   !***************************************************
   ! printAll:
   !     Prints the whole matrix, zeros included, on
@@ -453,6 +566,7 @@ contains
        write(*,'(*(E14.7,2X))') (this%get(i,j),j=1,this%n)
     end do
   end subroutine printAll
+  
   !***************************************************
   ! deleteRowAndCol:
   !     Deletes a given row and column.
@@ -540,6 +654,7 @@ contains
     end if
     this%n = this%n - 1
   end subroutine deleteRowAndCol
+  
   !***************************************************
   ! free:
   !     Clears memory space taken by the sparse matrix
@@ -555,7 +670,6 @@ contains
     if(allocated(this%AJ)) deallocate(this%AJ)
     if(allocated(this%AI)) deallocate(this%AI)
   end subroutine free
-
 
 
   !***********************************************
@@ -616,6 +730,7 @@ contains
     call bTranspose%free()
     call c%makeCRS(.false.)
   end function sparse_sparse_prod
+  
   !***************************************************
   ! sparse_vect_prod(*):
   !      Performs the product between a sparse matrix
@@ -641,6 +756,7 @@ contains
        res(i) = val
     end do
   end function sparse_vect_prod
+  
   !***************************************************
   ! coef_sparse_prod(*):
   !      Performs the product between a sparse matrix
@@ -664,6 +780,7 @@ contains
        res%A(i) = res%A(i)*c
     end do
   end function coef_sparse_prod
+  
   !***************************************************
   ! sparse_sparse_add:
   !     performs the addition of sparse a plus
@@ -698,6 +815,7 @@ contains
     end do
     call c%makeCRS
   end function sparse_sparse_add
+  
   !***************************************************
   ! sparse_sparse_sub:
   !     performs the subtraction of sparse a and
@@ -732,6 +850,7 @@ contains
     end do
     call c%makeCRS
   end function sparse_sparse_sub
+  
   !***************************************************
   ! transpose:
   !     Obtains the transpose of sparse matrix a
@@ -770,6 +889,7 @@ contains
        end do
     end do
   end function transpose
+  
   !***************************************************
   ! norm:
   !     Computes the frobenius-norm of a sparse matrix
@@ -791,6 +911,7 @@ contains
     end do
     norm = sqrt(norm)
   end function norm
+  
   !***************************************************
   ! trace:
   !     Computes the sum of the elements of the
@@ -814,6 +935,7 @@ contains
        end do
     end do
   end function trace
+  
   !***************************************************
   ! id:
   !     Computes the identity matrix of order n
@@ -833,6 +955,7 @@ contains
     end do
     call a%makeCRS
   end function id
+  
   !***************************************************
   ! inverseGMRESD:
   !    Obtains the inverse of sparse matrix A with
@@ -887,5 +1010,6 @@ contains
     print'(a)', 'the system has been solved'
     return
   end subroutine pardisoMKL
+  
 end module SparseKit
 
