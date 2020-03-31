@@ -1,14 +1,14 @@
 # Makefile
 
-COMPILER	:=  gfortran
+COMPILER	:=  ifort
 VPATH		:=  $(PWD)/Source
 BINDIR		:=  $(PWD)/Bin
 LIBDIR		:=  $(PWD)/SparseLibrary-v0.9
 OBJECTDIR	:=  $(LIBDIR)/Objects
-FFLAGS		:=  -g -O3 -static -J$(OBJECTDIR)
+FFLAGS		:=  -Ofast -qopenmp -free -check bounds -mkl -liomp5 -lpthread -ldl -traceback -module $(OBJECTDIR)
 FFLAGSDebug 	:=  -g -Wall -static -fcheck=all -J$(OBJECTDIR)
 
-OBJECTS := $(BINDIR)/utilities.o $(BINDIR)/quicksort.o $(BINDIR)/SparseKit.o $(BINDIR)/main.o
+OBJECTS := $(BINDIR)/Debugger.o $(BINDIR)/utilities.o $(BINDIR)/quicksort.o $(BINDIR)/SparseKit.o $(BINDIR)/main.o
 
 main: $(OBJECTS)
 	$(COMPILER) $(FFLAGS) $(OBJECTS) -o main
