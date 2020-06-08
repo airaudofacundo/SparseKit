@@ -18,7 +18,7 @@
   !************************************************************* 
   ! Dependecies:
   !             Use tools        - Filename: Utilities.f90
-  !             Use QuickSortMod - Filename: quicksort.f90
+  !             Use QuickSortMod - Filename: Quicksort.f90
   !*************************************************************
   ! Public procedures:
   !              Type(Sparse)
@@ -42,9 +42,7 @@
   !                   Function transpose
   !                   Function norm
   !                   Function trace
-  !                   Function inverseGMRESD
   !                   Function id
-  !                   Subroutine pardisoMKL (MKL_LIBRARY)
   !                   Subroutine sparse_sparse_prod ->  Operator:
   !                   Subroutine coef_sparse_prod   ->    
   !                   Subroutine sparse_vect_prod   ->     (*)
@@ -53,9 +51,7 @@
   !                   Subroutine sparse_sparse_sub  ->  Operator:
   !                                                        (-)
   !*************************************************************
-
-include 'mkl_pardiso.f90'
-  
+include 'mkl_pardiso.f90'  
 module SparseKit
 
   !***********************************************
@@ -69,7 +65,7 @@ module SparseKit
   
   private
   public :: Sparse, operator(*), operator(+), operator(-), transpose&
-       , norm, trace, inverseGMRESD, id, pardisoMKL
+       , norm, trace, id, inverse, inverseLumped
   
   type Triplet
      real(rkind)   , dimension(:), allocatable :: A
@@ -103,6 +99,9 @@ module SparseKit
      procedure, public  :: get
      procedure, public  :: getnnz
      procedure, public  :: getn
+     procedure, public  :: getA
+     procedure, public  :: getAI
+     procedure, public  :: getAJ
 
      procedure, public  :: printValue
      procedure, public  :: printNonZeros
@@ -148,6 +147,14 @@ module SparseKit
   interface id
      module procedure id
   end interface id
+
+  interface inverse
+     module procedure inverse
+  end interface inverse
+
+  interface inverseLumped
+     module procedure inverseLumped
+  end interface inverseLumped
   
   !***********************************************
   !*          LOCAL PRIVATE VARIABLES            *
@@ -156,7 +163,7 @@ module SparseKit
   real(rkind), dimension(:), allocatable :: auxA
   integer(ikind), dimension(:), allocatable :: auxAJ
   integer(ikind), dimension(:), allocatable :: rowVector
-  integer(ikind) :: repeats, l
+  integer(ikind) :: repeats, l, i
 
 contains
   
@@ -276,6 +283,8 @@ contains
     !sum up duplicates
     call this%handleDuplicates()
     !Allocate A and AJ with nnz
+    if(allocated(this%A)) deallocate(this%A)
+    if(allocated(this%AJ)) deallocate(this%AJ)
     allocate(this%A(this%counter), this%AJ(this%counter))
     do i = 1, this%counter
        this%A(i) = auxA(i)
@@ -314,7 +323,7 @@ contains
     do i = 1, this%n
        rowVector = this%triplet%col(this%counter+repeats:this%counter+repeats+this%rowCounter(i)-1)
        valueVector = this%triplet%A(this%counter+repeats:this%counter+repeats+this%rowCounter(i)-1)
-       !call quicksort(rowVector, valueVector, 1, this%rowCounter(i))
+       call quicksort(rowVector, valueVector, 1, this%rowCounter(i))
        j = 0
        do while(j < this%rowCounter(i))
           j = j + 1
@@ -355,10 +364,10 @@ contains
   !***************************************************
   subroutine appendPostCRS(this, val, row, col)
     implicit none
-    class(Sparse), intent(inout) :: this
-    real(rkind), intent(in) :: val
-    integer(ikind), intent(in) :: row
-    integer(ikind), intent(in) :: col
+    class(Sparse) , intent(inout) :: this
+    real(rkind)   , intent(in)    :: val
+    integer(ikind), intent(in)    :: row
+    integer(ikind), intent(in)    :: col
     integer(ikind) :: index
     logical :: positionExists = .false.
     index = this%AI(row)
@@ -478,6 +487,51 @@ contains
     class(Sparse), intent(inout) :: this
     getn = this%n
   end function getn
+
+  !***************************************************
+  ! getA:
+  !     get A vector of matrix
+  !  
+  ! Parameters:
+  !     Input, -
+  !     Output, getA(:)(Real(rkind))
+  !***************************************************
+  function getA(this)
+    implicit none
+    class(Sparse), intent(inout)    :: this
+    real(rkind), dimension(this%nnz) :: getA
+       getA = this%A
+  end function getA
+
+  !***************************************************
+  ! getAI:
+  !     get AI vector of matrix
+  !  
+  ! Parameters:
+  !     Input, -
+  !     Output, getAI(:)(Integer(ikind))
+  !***************************************************
+  function getAI(this)
+    implicit none
+    class(Sparse), intent(inout)       :: this
+    integer(ikind), dimension(this%n+1) :: getAI
+       getAI = this%AI
+  end function getAI
+
+    !***************************************************
+  ! getAJ:
+  !     get AJ vector of matrix
+  !  
+  ! Parameters:
+  !     Input, -
+  !     Output, getAJ(:)(Integer(ikind))
+  !***************************************************
+  function getAJ(this)
+    implicit none
+    class(Sparse), intent(inout)       :: this
+    integer(ikind), dimension(this%nnz) :: getAJ
+       getAJ = this%AJ
+  end function getAJ
   
   !***************************************************
   ! printValue:
@@ -964,62 +1018,84 @@ contains
     end do
     call a%makeCRS
   end function id
-  
-  !***************************************************
-  ! inverseGMRESD:
-  !    Obtains the inverse of sparse matrix A with
-  !    (Global Minimal Residual descent algorithm)
-  ! Parameters:
-  !     Input, A(Sparse)
-  !     Output, B(Sparse)
-  !***************************************************
-  function inverseGMRESD(A) result(M)
+
+  type(Sparse) function inverse(A)
     implicit none
-    class(Sparse), intent(in) :: A
-    type(Sparse) :: B
-    type(Sparse) :: C
-    type(Sparse) :: G
-    type(Sparse) :: M
-    real(rkind) :: alpha
-	print*, 'Revisar codigo'
-!    alpha = 1.1
-!    M = transpose(A)
-!    do while (abs(alpha) > 1e-20)
-!       C = A * M
-!       G = Id(A%n) - C
-!       B = A * G
-!       alpha = trace(transpose(G)*B)/(norm(B))**2
-!       M = M + alpha * G
-!    end do
+    class(Sparse)                          , intent(inout) :: A
+    real(rkind)             , dimension(:) , allocatable   :: vector
+    real(rkind)             , dimension(:) , allocatable   :: solution
+    type(mkl_pardiso_handle), dimension(64)                :: pt
+    real(rkind)             , dimension(1)                 :: ddum
+    integer(ikind)                                         :: maxfct
+    integer(ikind)                                         :: mnum
+    integer(ikind)                                         :: mtype
+    integer(ikind)                                         :: phase
+    integer(ikind)                                         :: nrhs
+    integer(ikind)          , dimension(64)                :: iparm(64)
+    integer(ikind)                                         :: msglvl
+    integer(ikind)                                         :: error
+    integer(ikind)          , dimension(1)                 :: idum
+    integer(ikind)                                         :: i, j
+    logical                                    :: sortRows = .false.
+    allocate(vector(A%getn()), solution(A%getn()))
+    inverse = Sparse(A%getn()**2, A%getn())
+    pt(1:64)%DUMMY = 0.d0
+    maxfct        = 1
+    mnum          = 1
+    mtype         = 1      ! real and structurally symmetric 
+    phase         = 13     ! analisys, numerical factorization, solve,
+                           ! iterative refinement
+    idum          = 0
+    nrhs          = 1
+    iparm         = 0
+    iparm(1)      = 1      ! user defined iparms
+    iparm(2)      = 2      ! 3 The parallel (OpenMP) version of the
+                           !nested dissection algorithm.
+                           ! 2 The nested dissection algorithm from
+                           !the METIS package.
+                           ! 0 The minimum degree algorithm.
+    iparm(4)      = 61     ! LU-preconditioned CGS iteration with a
+                           ! stopping criterion of
+                           ! 1.0E-6 for nonsymmetric matrices.
+    iparm(24)     = 1      ! two-level factorization algorithm.
+    iparm(60)     = 1      ! in-core mode or out-core mode
+    msglvl        = 0      ! non-print statistical information.
+    error         = 0
+    do i = 1, A%getn()
+       vector    = 0.d0
+       vector(i) = 1.d0
+       solution  = vector
+       call pardiso (pt, maxfct, mnum, mtype, phase, A%getn()  &
+            , A%geta(), A%getai(), A%getaj(), idum, nrhs, iparm &
+            , msglvl, vector, solution, error                  )
+       if (error /= 0) then
+          write(*,'(a,i5)') 'Inverse matrix error'
+          stop
+       end if
+       do j = 1, A%getn()
+          if (solution(j) .ne. 0.d0) then
+             call inverse%append( val = solution(j) , row = i, col = j)
+          end if
+       end do
+       write(*,*) 'Inverse =>', (100*i/A%getn()),'%'
+    end do
+    deallocate(vector,solution)
+    call inverse%makeCRS(sortRows)
+    print'(a)', 'Inverse ok'
     return
-  end function inverseGMRESD
-  subroutine pardisoMKL(p, maxfct, mnum, mtype, phase, stiffness,&
-       idum, nrhs, iparm, msglvl, rhs, dof, error)
+  end function inverse
+
+  type(Sparse) function inverseLumped(matrix)
     implicit none
-    class(Sparse), intent(inout) :: stiffness
-    type(mkl_pardiso_handle) :: pt(64)
-    real(rkind) :: ddum(1), p(64), rhs(stiffness%n)
-    real(rkind) :: dof(stiffness%n)
-    integer(ikind) :: maxfct, mnum, mtype, phase, n, nnz, i, j
-    integer(ikind) :: nrhs, iparm(64), msglvl, error, error1, idum(1)
-    pt(1:64)%DUMMY = p(1:64)
-    dof(1:stiffness%n) = rhs(1:stiffness%n)
-    call pardiso (pt, maxfct, mnum, mtype, phase, stiffness%n, stiffness%a, &
-         stiffness%ai, stiffness%aj, idum, nrhs, iparm, msglvl, rhs, dof, error)
-    if (error /= 0) then
-       write(*,'(a,i5)') 'the following error was detected: ', error
-       stop
-    end if
-    phase = -1 ! release internal memory
-    call pardiso (pt, maxfct, mnum, mtype, phase, n, ddum, idum, idum,&
-         idum, nrhs, iparm, msglvl, ddum, ddum, error1)
-    if (error1 /= 0) then
-       write(*,'(a,i5)') 'the following error on release stage was detected: ', error1
-       stop
-    end if
-    print'(a)', 'the system has been solved'
-    return
-  end subroutine pardisoMKL
+    class(Sparse), intent(inout) :: matrix
+    logical                      :: sortRows = .false.
+    integer(ikind) :: i
+    inverseLumped = Sparse(nnz = matrix%getn(), rows = matrix%getn())
+    do i = 1, matrix%getn()
+       call inverseLumped%append(1._rkind/matrix%get(i,i),i,i)
+    end do
+    call inverseLumped%makeCRS(sortRows)
+  end function inverseLumped
   
 end module SparseKit
 
