@@ -5,7 +5,7 @@ VPATH		:=  $(PWD)/Source
 BINDIR		:=  $(PWD)/Bin
 LIBDIR		:=  $(PWD)/SparseLibrary-v1.0
 OBJECTDIR	:=  $(LIBDIR)/Objects
-FFLAGS		:=  -Ofast -qopenmp -free -check bounds -mkl -liomp5 -lpthread -ldl -traceback -module $(OBJECTDIR)
+FFLAGS		:=  -Ofast -qopenmp -free -mkl -liomp5 -lpthread -ldl -module $(OBJECTDIR)
 FFLAGSDebug 	:=  -g -Wall -static -fcheck=all -J$(OBJECTDIR)
 
 OBJECTS := $(BINDIR)/Debugger.o $(BINDIR)/Utilities.o $(BINDIR)/Quicksort.o $(BINDIR)/SparseKit.o $(BINDIR)/main.o
